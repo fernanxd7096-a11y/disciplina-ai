@@ -40,6 +40,9 @@ function RootStack() {
         <Stack.Screen name="assistant" options={{ title: 'Asistente', presentation: 'modal' }} />
         <Stack.Screen name="stats" options={{ title: 'Estadísticas' }} />
         <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
+        <Stack.Screen name="habit/new" options={{ title: 'Nuevo hábito', presentation: 'modal' }} />
+        <Stack.Screen name="habit/[id]" options={{ title: 'Hábito' }} />
+        <Stack.Screen name="habit/edit/[id]" options={{ title: 'Editar hábito', presentation: 'modal' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={status === 'signedOut'}>

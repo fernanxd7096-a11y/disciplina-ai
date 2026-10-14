@@ -1,6 +1,8 @@
 export { Badge } from './Badge';
 export { Button, type ButtonProps } from './Button';
 export { Card } from './Card';
+export { Chip } from './Chip';
+export { Stepper } from './Stepper';
 export { IconButton } from './IconButton';
 export { Notice } from './Notice';
 export { progressPercent, progressRatio } from './progress';

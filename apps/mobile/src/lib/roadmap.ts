@@ -5,7 +5,7 @@
  */
 export const featurePhase = {
   auth: 3,
-  habits: 3,
+  habits: 3, // implementado (3b)
   notes: 3,
   tasks: 3,
   calendar: 3,

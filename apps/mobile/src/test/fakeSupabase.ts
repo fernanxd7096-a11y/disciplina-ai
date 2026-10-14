@@ -13,6 +13,20 @@ export type FakeSession = { access_token: string; user: { id: string; email: str
 
 type Filter = (row: Row) => boolean;
 
+/** Valores por defecto de columnas, copiados de la migración SQL. */
+const TABLE_DEFAULTS: Record<string, Row> = {
+  habits: {
+    icon: null, color: null, category: null, frequency: 'daily', days_of_week: [0, 1, 2, 3, 4, 5, 6],
+    target_per_period: 1, unit: null, reminder_time: null, status: 'active', sort_order: 0,
+  },
+  habit_logs: { value: 1, note: null },
+  rest_days: { reason: null },
+  tasks: { description: null, priority: 3, due_at: null, status: 'todo', completed_at: null, rescheduled_count: 0, category_id: null },
+  notes: { title: '', body: '', pinned: false, archived_at: null, category_id: null, task_id: null, event_id: null },
+  events: { all_day: false, location: null, notes: null, timezone: 'America/Lima', category_id: null },
+  reminders: { event_id: null, task_id: null, offset_minutes: null, remind_at: null, enabled: true },
+};
+
 let idCounter = 0;
 export function fakeId(): string {
   idCounter += 1;
@@ -214,7 +228,15 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: unknown; count?: 
     if (this.op === 'insert' || this.op === 'upsert') {
       for (const p of this.payload) {
         if (p.user_id && p.user_id !== uid) return { data: null, error: { message: 'new row violates row-level security policy', code: '42501' } };
-        const row: Row = { id: fakeId(), user_id: uid, created_at: now, updated_at: now, deleted_at: null, ...p };
+        const row: Row = {
+          id: fakeId(),
+          user_id: uid,
+          created_at: now,
+          updated_at: now,
+          deleted_at: null,
+          ...TABLE_DEFAULTS[this.table],
+          ...p,
+        };
         if (this.op === 'upsert') {
           const existing = store.find((r) => r.user_id === uid && this.onConflict.every((c) => r[c] === row[c]));
           if (existing) { Object.assign(existing, p, { updated_at: now }); result.push(existing); continue; }
