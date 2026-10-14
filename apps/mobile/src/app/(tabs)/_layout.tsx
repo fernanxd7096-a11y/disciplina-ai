@@ -38,14 +38,8 @@ export default function TabsLayout() {
       }}>
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icon('home', 'home-outline') }} />
       <Tabs.Screen name="habits" options={{ title: 'Hábitos', tabBarIcon: icon('flame', 'flame-outline') }} />
-      <Tabs.Screen
-        name="planner"
-        options={{ title: 'Agenda', tabBarIcon: icon('calendar', 'calendar-outline') }}
-      />
-      <Tabs.Screen
-        name="training"
-        options={{ title: 'Entreno', tabBarIcon: icon('barbell', 'barbell-outline') }}
-      />
+      <Tabs.Screen name="planner" options={{ title: 'Agenda', tabBarIcon: icon('calendar', 'calendar-outline') }} />
+      <Tabs.Screen name="training" options={{ title: 'Entreno', tabBarIcon: icon('barbell', 'barbell-outline') }} />
       <Tabs.Screen
         name="nutrition"
         options={{ title: 'Nutrición', tabBarIcon: icon('nutrition', 'nutrition-outline') }}

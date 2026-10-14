@@ -5,6 +5,7 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { Button, Card, Notice, Screen, SectionHeader, Text } from '@/components/ui';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
+import { NotificationSettings } from '@/features/reminders/NotificationSettings';
 import { useDeviceTimeZone } from '@/hooks/useDeviceTimeZone';
 import { phaseNotice } from '@/lib/roadmap';
 import { colors, spacing } from '@/theme';
@@ -79,6 +80,8 @@ export function SettingsScreen() {
       </Card>
       {profile.isError ? <Notice tone="error" message="No se pudo cargar tu perfil. Revisa tu conexión." /> : null}
       {updateProfile.isError ? <Notice tone="error" message="No se pudo guardar el cambio." /> : null}
+
+      <NotificationSettings />
 
       <SectionHeader title="Privacidad" />
       <Card>

@@ -8,8 +8,8 @@ export const featurePhase = {
   habits: 3, // implementado (3b)
   notes: 3, // implementado (3c)
   tasks: 3, // implementado (3c)
-  calendar: 3,
-  reminders: 3,
+  calendar: 3, // implementado (3d)
+  reminders: 3, // implementado (3d)
   training: 4,
   nutrition: 4,
   foodPhoto: 4,

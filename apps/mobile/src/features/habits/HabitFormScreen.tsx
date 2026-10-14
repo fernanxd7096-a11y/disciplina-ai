@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Chip,
+  DateTimeField,
   Notice,
   Screen,
   SectionHeader,
@@ -28,6 +29,8 @@ type FormValues = {
   days_of_week: number[];
   target_per_period: number;
   unit: string;
+  /** "HH:MM" o null si no quiere recordatorio. */
+  reminder_time: string | null;
 };
 
 const blank: FormValues = {
@@ -37,6 +40,7 @@ const blank: FormValues = {
   days_of_week: [0, 1, 2, 3, 4, 5, 6],
   target_per_period: 1,
   unit: '',
+  reminder_time: null,
 };
 
 function fromHabit(h: Habit): FormValues {
@@ -47,6 +51,7 @@ function fromHabit(h: Habit): FormValues {
     days_of_week: h.days_of_week,
     target_per_period: h.target_per_period,
     unit: h.unit ?? '',
+    reminder_time: h.reminder_time ? h.reminder_time.slice(0, 5) : null,
   };
 }
 
@@ -104,6 +109,7 @@ export function HabitFormScreen({ habit }: { habit?: Habit }) {
                     days_of_week: p.days_of_week,
                     target_per_period: p.target_per_period,
                     unit: p.unit ?? '',
+                    reminder_time: values.reminder_time,
                   })
                 }
                 testID={`preset-${p.key}`}
@@ -207,6 +213,34 @@ export function HabitFormScreen({ habit }: { habit?: Habit }) {
           maxLength={20}
         />
       ) : null}
+
+      <View style={styles.block}>
+        <Text variant="label" color="textSecondary">
+          Recordatorio
+        </Text>
+        <View style={styles.wrap}>
+          <Chip
+            label={values.reminder_time ? 'Recordarme' : 'Sin recordatorio'}
+            icon={values.reminder_time ? 'notifications' : 'notifications-off-outline'}
+            selected={Boolean(values.reminder_time)}
+            onPress={() => set('reminder_time', values.reminder_time ? null : '20:00')}
+            testID="habit-reminder-toggle"
+          />
+        </View>
+        {values.reminder_time ? (
+          <DateTimeField
+            label="Hora del aviso"
+            mode="time"
+            value={null}
+            display={{ date: '', time: values.reminder_time }}
+            onChange={(_day, time) => set('reminder_time', time)}
+            testID="habit-reminder"
+          />
+        ) : null}
+        <Text variant="caption" color="textMuted">
+          Solo avisa los días que toca y no si ya lo cumpliste hoy.
+        </Text>
+      </View>
 
       <Card>
         <Text variant="caption" color="textSecondary">

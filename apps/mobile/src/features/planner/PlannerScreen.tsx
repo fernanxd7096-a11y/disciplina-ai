@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 
-import { Card, EmptyState, IconButton, Screen, ScreenHeader, SegmentedControl } from '@/components/ui';
+import { IconButton, Screen, ScreenHeader, SegmentedControl } from '@/components/ui';
+import { CalendarView } from '@/features/events/CalendarView';
 import { NotesView } from '@/features/notes/NotesView';
 import { TasksView } from '@/features/tasks/TasksView';
-import { phaseNotice } from '@/lib/roadmap';
 
 type View = 'tasks' | 'notes' | 'calendar';
 
@@ -39,16 +39,7 @@ export function PlannerScreen() {
       />
       {view === 'tasks' ? <TasksView /> : null}
       {view === 'notes' ? <NotesView /> : null}
-      {view === 'calendar' ? (
-        <Card>
-          <EmptyState
-            icon="calendar-outline"
-            title="Calendario vacío"
-            description={`Vistas diaria, semanal y mensual con recordatorios 24 h, 1 h o 15 min antes. ${phaseNotice('calendar')}`}
-            testID="planner-empty-calendar"
-          />
-        </Card>
-      ) : null}
+      {view === 'calendar' ? <CalendarView /> : null}
     </Screen>
   );
 }

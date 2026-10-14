@@ -2,6 +2,7 @@ import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { cancelAllOurs } from '@/features/reminders/notifications';
 import { supabase as defaultClient } from '@/lib/supabase';
 import { authErrorMessage } from './validation';
 
@@ -95,6 +96,8 @@ export function AuthProvider({ children, client = defaultClient }: AuthProviderP
 
   const signOut = useCallback<AuthValue['signOut']>(async () => {
     if (!client) return { ok: true };
+    // No deben quedar avisos de esta cuenta en el teléfono.
+    await cancelAllOurs().catch(() => {});
     const { error } = await client.auth.signOut();
     queryClient.clear();
     return error ? { ok: false, message: authErrorMessage(error) } : { ok: true };

@@ -14,12 +14,17 @@ import {
   SectionHeader,
   Text,
 } from '@/components/ui';
+import { useEvents } from '@/features/events/api';
+import { nextEvent } from '@/features/events/logic';
 import { useHabitData, useHabitStepper, useToday } from '@/features/habits/api';
 import { HabitRow } from '@/features/habits/components/HabitRow';
 import { buildContext, streaks, todayItems, todaySummary } from '@/features/habits/logic';
 import { useProfile, useUserTimeZone } from '@/features/profile/api';
+import { useSetTaskStatus, useTasks } from '@/features/tasks/api';
+import { groupTasks, localTime } from '@/features/tasks/logic';
+import { TaskRow } from '@/features/tasks/TaskRow';
 import { useNow } from '@/hooks/useNow';
-import { formatLongDate, greeting } from '@/lib/dates';
+import { formatLongDate, greeting, timeUntil } from '@/lib/dates';
 import { phaseNotice, type Feature } from '@/lib/roadmap';
 import { colors, spacing } from '@/theme';
 
@@ -27,7 +32,6 @@ type DomainRow = { key: Feature; label: string; icon: ComponentProps<typeof Ioni
 
 /** Módulos que aún no tienen datos reales (se van reemplazando por resúmenes reales). */
 const upcoming: DomainRow[] = [
-  { key: 'tasks', label: 'Tareas', icon: 'checkbox-outline', color: colors.tasks },
   { key: 'training', label: 'Entrenamiento', icon: 'barbell-outline', color: colors.training },
   { key: 'nutrition', label: 'Nutrición', icon: 'nutrition-outline', color: colors.nutrition },
 ];
@@ -41,6 +45,15 @@ export function DashboardScreen() {
   const profile = useProfile();
   const habits = useHabitData();
   const stepper = useHabitStepper();
+  const events = useEvents();
+  const tasks = useTasks();
+  const setTaskStatus = useSetTaskStatus();
+
+  const upcomingEvent = useMemo(() => nextEvent(events.data ?? [], now, timeZone), [events.data, now, timeZone]);
+  const dueTasks = useMemo(() => {
+    const groups = groupTasks(tasks.data ?? [], now, timeZone);
+    return [...(groups.find((g) => g.key === 'overdue')?.tasks ?? []), ...(groups.find((g) => g.key === 'today')?.tasks ?? [])];
+  }, [tasks.data, now, timeZone]);
 
   const firstName = profile.data?.display_name?.split(' ')[0];
 
@@ -145,6 +158,64 @@ export function DashboardScreen() {
         <Button label="Asistente" icon="sparkles-outline" variant="secondary" grow onPress={() => router.push('/assistant')} testID="open-assistant" />
       </View>
 
+      <SectionHeader title="Próximo evento" actionLabel="Calendario" onAction={() => router.push('/planner')} />
+      {upcomingEvent ? (
+        <Card
+          onPress={() => router.push({ pathname: '/event/[id]', params: { id: upcomingEvent.event.id } })}
+          accessibilityLabel={`Próximo evento: ${upcomingEvent.event.title}`}
+          testID="next-event">
+          <View style={styles.eventRow}>
+            <View style={styles.eventBar} />
+            <View style={styles.flex}>
+              <Text variant="bodyStrong" numberOfLines={1}>
+                {upcomingEvent.event.title}
+              </Text>
+              <Text variant="caption" color="textSecondary">
+                {upcomingEvent.event.all_day
+                  ? 'Todo el día'
+                  : `${localTime(upcomingEvent.event.starts_at, timeZone)} – ${localTime(upcomingEvent.event.ends_at, timeZone)}`}
+                {upcomingEvent.event.location ? ` · ${upcomingEvent.event.location}` : ''}
+              </Text>
+            </View>
+            <Text variant="caption" color={upcomingEvent.ongoing ? 'success' : 'accent'} testID="next-event-when">
+              {upcomingEvent.ongoing ? 'En curso' : timeUntil(new Date(upcomingEvent.event.starts_at), now)}
+            </Text>
+          </View>
+        </Card>
+      ) : (
+        <Card>
+          <Text variant="body" color="textSecondary">
+            {events.isLoading ? 'Cargando…' : 'No tienes eventos próximos.'}
+          </Text>
+        </Card>
+      )}
+
+      <SectionHeader title="Tareas de hoy" actionLabel="Ver todas" onAction={() => router.push('/planner')} />
+      <Card testID="today-tasks">
+        {dueTasks.length ? (
+          dueTasks.slice(0, 3).map((t, i) => (
+            <TaskRow
+              key={t.id}
+              first={i === 0}
+              task={t}
+              now={now}
+              timeZone={timeZone}
+              onToggle={() => setTaskStatus.mutate({ id: t.id, status: 'done' })}
+              onOpen={() => router.push({ pathname: '/task/[id]', params: { id: t.id } })}
+            />
+          ))
+        ) : (
+          <Text variant="body" color="textSecondary">
+            {tasks.isLoading ? 'Cargando…' : 'Nada pendiente para hoy.'}
+          </Text>
+        )}
+        {dueTasks.length > 3 ? (
+          <Text variant="caption" color="textMuted">
+            y {dueTasks.length - 3} más…
+          </Text>
+        ) : null}
+      </Card>
+
       <SectionHeader title="Próximamente" />
       <Card>
         {upcoming.map((d, i) => (
@@ -176,4 +247,6 @@ const styles = StyleSheet.create({
   domainIcon: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, gap: spacing.xxs },
   actions: { flexDirection: 'row', gap: spacing.md },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  eventBar: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: colors.events },
 });

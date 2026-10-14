@@ -63,6 +63,6 @@ describe('navegación con sesión', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'Notas' }));
     expect(await screen.findByTestId('planner-empty-notes')).toBeTruthy();
     fireEvent.press(screen.getByRole('tab', { name: 'Calendario' }));
-    expect(await screen.findByTestId('planner-empty-calendar')).toBeTruthy();
+    expect(await screen.findByTestId('calendar-view')).toBeTruthy();
   });
 });

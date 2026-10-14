@@ -17,7 +17,7 @@ type DateTimeFieldProps = {
   onChange: (day: string, time: string) => void;
   /** Texto ya formateado en la zona del perfil. */
   display: { date: string; time: string } | null;
-  mode?: 'date' | 'datetime';
+  mode?: 'date' | 'datetime' | 'time';
   testID?: string;
 };
 
@@ -51,20 +51,22 @@ export function DateTimeField({ label, value, onChange, display, mode = 'datetim
         {label}
       </Text>
       <View style={styles.row}>
-        <Pressable
-          style={[styles.field, styles.flex]}
-          onPress={() => setPicker('date')}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}: ${display?.date ?? 'sin fecha'}. Cambiar fecha.`}
-          testID={testID ? `${testID}-date` : undefined}>
-          <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-          <Text variant="body" color={display ? 'text' : 'textMuted'}>
-            {display?.date ?? 'Elegir fecha'}
-          </Text>
-        </Pressable>
-        {mode === 'datetime' ? (
+        {mode !== 'time' ? (
           <Pressable
-            style={styles.field}
+            style={[styles.field, styles.flex]}
+            onPress={() => setPicker('date')}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}: ${display?.date ?? 'sin fecha'}. Cambiar fecha.`}
+            testID={testID ? `${testID}-date` : undefined}>
+            <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+            <Text variant="body" color={display ? 'text' : 'textMuted'}>
+              {display?.date ?? 'Elegir fecha'}
+            </Text>
+          </Pressable>
+        ) : null}
+        {mode !== 'date' ? (
+          <Pressable
+            style={[styles.field, mode === 'time' && styles.flex]}
             onPress={() => setPicker('time')}
             accessibilityRole="button"
             accessibilityLabel={`Hora: ${display?.time ?? 'sin hora'}. Cambiar hora.`}

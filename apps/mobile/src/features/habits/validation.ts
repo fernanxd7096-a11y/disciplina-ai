@@ -15,6 +15,10 @@ export const habitSchema = z
       .max(20, 'Máximo 20 caracteres.')
       .transform((v) => (v ? v : null))
       .nullable(),
+    reminder_time: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora no válida.')
+      .nullable(),
   })
   .refine((v) => v.frequency === 'weekly' || v.days_of_week.length > 0, {
     path: ['days_of_week'],
@@ -36,6 +40,6 @@ export function toHabitInput(v: z.output<typeof habitSchema>): HabitInput {
     days_of_week: v.frequency === 'weekly' ? [0, 1, 2, 3, 4, 5, 6] : [...new Set(v.days_of_week)].sort(),
     target_per_period: v.target_per_period,
     unit: v.frequency === 'daily' && v.target_per_period > 1 ? v.unit : null,
-    reminder_time: null,
+    reminder_time: v.reminder_time,
   };
 }
