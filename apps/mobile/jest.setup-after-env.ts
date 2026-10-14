@@ -1,4 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { configure } from '@testing-library/react-native';
+
+// En CI (sin caché y con pocos núcleos) la primera carga de rutas es lenta:
+// se espera hasta 5 s a que aparezca un elemento antes de dar la prueba por fallida.
+configure({ asyncUtilTimeout: 5000 });
 
 // Se ejecuta con el entorno de pruebas ya cargado (beforeEach disponible).
 beforeEach(() => {

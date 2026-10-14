@@ -74,7 +74,7 @@ describe('calendario y recordatorios', () => {
     seedEvent(fake);
     seedReminder(fake, { offset_minutes: 60 });
     seedReminder(fake, { offset_minutes: 1440 });
-    renderRouter(APP_DIR, { initialUrl: '/' });
+    const app = renderRouter(APP_DIR, { initialUrl: '/' });
 
     await waitFor(() => expect(scheduledNotifications()).toHaveLength(2));
     const [first] = scheduledNotifications().sort((a, b) => a.trigger.date.getTime() - b.trigger.date.getTime());
@@ -83,7 +83,8 @@ describe('calendario y recordatorios', () => {
     expect(first.content.data.url).toBe('/event/ev1');
     expect(first.trigger.channelId).toBe('events');
 
-    // Abrir otra pantalla y volver no crea copias.
+    // Reabrir la app en otra pantalla no crea copias.
+    app.unmount();
     renderRouter(APP_DIR, { initialUrl: '/planner' });
     await screen.findByTestId('planner-screen');
     await waitFor(() => expect(scheduledNotifications()).toHaveLength(2));
@@ -93,13 +94,14 @@ describe('calendario y recordatorios', () => {
     const fake = signedInFake();
     const ev = seedEvent(fake);
     seedReminder(fake, { offset_minutes: 60 });
-    renderRouter(APP_DIR, { initialUrl: '/' });
+    const first = renderRouter(APP_DIR, { initialUrl: '/' });
     await waitFor(() => expect(scheduledNotifications()).toHaveLength(1));
     const oldId = scheduledNotifications()[0].identifier;
 
     // Cambia la hora en la base y vuelve a cargar la app (como tras editar en otro dispositivo).
     const newStart = new Date(new Date(ev.starts_at).getTime() + 3 * HOUR);
     Object.assign(fake.rows('events')[0], { starts_at: newStart.toISOString(), ends_at: new Date(newStart.getTime() + HOUR).toISOString() });
+    first.unmount();
     renderRouter(APP_DIR, { initialUrl: '/' });
 
     await waitFor(() => expect(scheduledNotifications().map((n) => n.identifier)).not.toContain(oldId));
@@ -168,13 +170,15 @@ describe('calendario y recordatorios', () => {
     fake.seed('notification_prefs', [
       { user_id: fake.session!.user.id, default_event_offsets: [15, 60], habit_reminders: true, task_reminders: true, quiet_start: null, quiet_end: null },
     ]);
-    renderRouter(APP_DIR, { initialUrl: '/' });
+    const first = renderRouter(APP_DIR, { initialUrl: '/' });
     await waitFor(() => expect(scheduledNotifications().length).toBeGreaterThan(0));
 
-    renderRouter(APP_DIR, { initialUrl: '/settings' });
+    first.unmount();
+    const second = renderRouter(APP_DIR, { initialUrl: '/settings' });
     await press(await screen.findByTestId('pref-habits'));
     await waitFor(() => expect(fake.rows('notification_prefs')[0].habit_reminders).toBe(false));
 
+    second.unmount();
     renderRouter(APP_DIR, { initialUrl: '/' });
     await waitFor(() => expect(scheduledNotifications()).toHaveLength(0));
   });
