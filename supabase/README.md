@@ -4,6 +4,13 @@ Backend de DISCIPLINA AI: Auth, Postgres con RLS, Storage y Edge Functions.
 
 Se completa en la **Fase 3** (migraciones, políticas RLS y pruebas pgTAP).
 
+## Proyecto actual
+
+- Nombre: `disciplina-ai` (organización *scorpio*, plan gratuito)
+- Región: us-east-1
+- URL: `https://nkrhqnaeahrvrmhwutxj.supabase.co`
+- Data API activada; tablas nuevas **no** se exponen automáticamente (las migraciones hacen `GRANT` explícito); RLS automático activado.
+
 ## Crear el proyecto (lo haces tú una sola vez)
 
 1. Entra a <https://supabase.com/dashboard> y crea un proyecto nuevo (plan gratuito). Región sugerida: la más cercana a Lima disponible.
