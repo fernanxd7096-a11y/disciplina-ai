@@ -1,4 +1,4 @@
-import { readPublicEnv } from '@/lib/env';
+import { isSecretKey, readPublicEnv } from '@/lib/env';
 import { authErrorMessage, signInSchema, signUpSchema, validate } from '../validation';
 
 describe('validación de formularios', () => {
@@ -46,5 +46,16 @@ describe('readPublicEnv', () => {
     expect(readPublicEnv({})).toBeNull();
     expect(readPublicEnv({ EXPO_PUBLIC_SUPABASE_URL: 'https://abc.supabase.co' })).toBeNull();
     expect(readPublicEnv({ EXPO_PUBLIC_SUPABASE_URL: 'http://evil.com', EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'k' })).toBeNull();
+  });
+
+  it('rechaza claves de administrador (sb_secret_ y JWT service_role)', () => {
+    const jwt = (role: string) => `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ role })).replace(/=+$/, '')}.firma`;
+    const url = 'https://abc123.supabase.co';
+    expect(isSecretKey('sb_secret_abc')).toBe(true);
+    expect(isSecretKey(jwt('service_role'))).toBe(true);
+    expect(isSecretKey(jwt('anon'))).toBe(false);
+    expect(isSecretKey('sb_publishable_abc')).toBe(false);
+    expect(readPublicEnv({ EXPO_PUBLIC_SUPABASE_URL: url, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abc' })).toBeNull();
+    expect(readPublicEnv({ EXPO_PUBLIC_SUPABASE_URL: url, EXPO_PUBLIC_SUPABASE_ANON_KEY: jwt('service_role') })).toBeNull();
   });
 });
