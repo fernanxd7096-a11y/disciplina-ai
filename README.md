@@ -8,7 +8,7 @@ Asistente personal de disciplina, organización, entrenamiento y nutrición. App
 | --- | --- | --- |
 | 1 | Arquitectura, modelo de datos, plan | ✅ Hecha |
 | 2 | Proyecto, navegación, sistema visual, pantallas, pruebas, CI | ✅ Hecha |
-| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline | ✅ Hecha · base aplicada en Supabase (14 oct 2026) · falta probar en un teléfono |
+| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline | ✅ Hecha · base aplicada en Supabase · APK instalado en Android (14 oct 2026) |
 | 4 | Entrenamiento y nutrición (incluye análisis de fotos) | Pendiente |
 | 5 | Asistente de IA con herramientas controladas | Pendiente |
 | 6 | Estadísticas, logros, ajustes, compilación final | Pendiente |
