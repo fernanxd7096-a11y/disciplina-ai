@@ -6,6 +6,13 @@ on:
   pull_request:
 
 jobs:
+  database:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migraciones + pruebas RLS en Postgres temporal
+        run: bash supabase/tests/run.sh
+
   mobile:
     runs-on: ubuntu-latest
     defaults:
