@@ -8,12 +8,22 @@ Asistente personal de disciplina, organización, entrenamiento y nutrición. App
 | --- | --- | --- |
 | 1 | Arquitectura, modelo de datos, plan | ✅ Hecha |
 | 2 | Proyecto, navegación, sistema visual, pantallas, pruebas, CI | ✅ Hecha |
-| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline | ⏳ Siguiente |
+| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline | ✅ Código hecho · falta aplicar la base en Supabase y probar en un teléfono |
 | 4 | Entrenamiento y nutrición (incluye análisis de fotos) | Pendiente |
 | 5 | Asistente de IA con herramientas controladas | Pendiente |
 | 6 | Estadísticas, logros, ajustes, compilación final | Pendiente |
 
-**Qué funciona hoy:** navegación entre las 5 pestañas y las pantallas de Asistente, Estadísticas y Ajustes; saludo y fecha reales según tu zona horaria; selector Tareas/Notas/Calendario. Las pantallas de módulos aún no implementados muestran un estado vacío que indica en qué fase se activan. **No hay datos de demostración**: nada de lo que ves es inventado.
+**Qué funciona hoy (probado con 145 pruebas de app y 45 de base de datos):**
+
+- Cuenta: registro, inicio de sesión, recuperar contraseña; sesión cifrada en el teléfono.
+- Hábitos: crear (con plantillas), días o veces por semana, contadores, rachas, días de descanso, pausar, historial editable, aviso diario.
+- Tareas: prioridad, fecha límite, atrasadas, mover a hoy, completar.
+- Notas: guardado automático, búsqueda, fijar, archivar.
+- Calendario: mes/semana/día, eventos con avisos (al empezar, 15 min, 1 h, 1 día u hora exacta), sin duplicados.
+- Inicio: progreso real del día, próximo evento con tiempo restante, tareas de hoy.
+- Sin conexión: ves tus datos; marcar hábitos y completar tareas se envía al reconectar.
+
+Entrenamiento, nutrición, asistente IA y estadísticas muestran en qué fase se activan. No hay datos de demostración.
 
 ## Requisitos
 
@@ -26,9 +36,15 @@ Asistente personal de disciplina, organización, entrenamiento y nutrición. App
 ```bash
 pnpm install
 cd apps/mobile
-cp .env.example .env      # se completa en la Fase 3
+cp .env.example .env      # pega tu "Publishable key" de Supabase (Project Settings → API Keys)
 pnpm start                # escanea el QR con Expo Go
 ```
+
+### Base de datos (una sola vez)
+
+Aplica `supabase/migrations/*.sql` en tu proyecto: en el panel de Supabase abre **SQL Editor**, pega el contenido del archivo y pulsa **Run**. O con la CLI: `npx supabase link --project-ref <ref>` y `npx supabase db push`.
+
+Pruebas de la base (necesitan PostgreSQL instalado): `bash supabase/tests/run.sh`.
 
 ## Comandos
 
