@@ -1,0 +1,13 @@
+{
+  "name": "disciplina-ai",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "mobile": "pnpm --filter mobile start",
+    "android": "pnpm --filter mobile android",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "engines": { "node": ">=20" }
+}
