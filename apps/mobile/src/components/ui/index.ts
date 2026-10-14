@@ -2,6 +2,7 @@ export { Badge } from './Badge';
 export { Button, type ButtonProps } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { DateTimeField } from './DateTimeField';
 export { Stepper } from './Stepper';
 export { IconButton } from './IconButton';
 export { Notice } from './Notice';

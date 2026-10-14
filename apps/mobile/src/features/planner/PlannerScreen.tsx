@@ -1,34 +1,32 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 
-import { Card, EmptyState, Screen, ScreenHeader, SegmentedControl } from '@/components/ui';
+import { Card, EmptyState, IconButton, Screen, ScreenHeader, SegmentedControl } from '@/components/ui';
+import { NotesView } from '@/features/notes/NotesView';
+import { TasksView } from '@/features/tasks/TasksView';
 import { phaseNotice } from '@/lib/roadmap';
 
 type View = 'tasks' | 'notes' | 'calendar';
 
-const content: Record<View, { icon: 'checkbox-outline' | 'document-text-outline' | 'calendar-outline'; title: string; description: string }> = {
-  tasks: {
-    icon: 'checkbox-outline',
-    title: 'Sin tareas',
-    description: `Tareas con prioridad, fecha límite, etiquetas y vista de atrasadas. ${phaseNotice('tasks')}`,
-  },
-  notes: {
-    icon: 'document-text-outline',
-    title: 'Sin notas',
-    description: `Notas con búsqueda, categorías, etiquetas y guardado automático. ${phaseNotice('notes')}`,
-  },
-  calendar: {
-    icon: 'calendar-outline',
-    title: 'Calendario vacío',
-    description: `Vistas diaria, semanal y mensual con recordatorios 24 h, 1 h o 15 min antes. ${phaseNotice('calendar')}`,
-  },
+const addAction: Partial<Record<View, { label: string; href: '/task/new' | '/note/new' }>> = {
+  tasks: { label: 'Nueva tarea', href: '/task/new' },
+  notes: { label: 'Nueva nota', href: '/note/new' },
 };
 
 export function PlannerScreen() {
   const [view, setView] = useState<View>('tasks');
-  const c = content[view];
+  const add = addAction[view];
+
   return (
     <Screen testID="planner-screen">
-      <ScreenHeader title="Agenda" />
+      <ScreenHeader
+        title="Agenda"
+        right={
+          add ? (
+            <IconButton icon="add" tone="accent" accessibilityLabel={add.label} onPress={() => router.push(add.href)} testID="planner-add" />
+          ) : null
+        }
+      />
       <SegmentedControl
         accessibilityLabel="Sección de la agenda"
         value={view}
@@ -39,9 +37,18 @@ export function PlannerScreen() {
           { value: 'calendar', label: 'Calendario' },
         ]}
       />
-      <Card>
-        <EmptyState icon={c.icon} title={c.title} description={c.description} testID={`planner-empty-${view}`} />
-      </Card>
+      {view === 'tasks' ? <TasksView /> : null}
+      {view === 'notes' ? <NotesView /> : null}
+      {view === 'calendar' ? (
+        <Card>
+          <EmptyState
+            icon="calendar-outline"
+            title="Calendario vacío"
+            description={`Vistas diaria, semanal y mensual con recordatorios 24 h, 1 h o 15 min antes. ${phaseNotice('calendar')}`}
+            testID="planner-empty-calendar"
+          />
+        </Card>
+      ) : null}
     </Screen>
   );
 }

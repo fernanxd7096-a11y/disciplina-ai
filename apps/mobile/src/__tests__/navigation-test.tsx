@@ -61,8 +61,8 @@ describe('navegación con sesión', () => {
     renderRouter(APP_DIR, { initialUrl: '/planner' });
     expect(await screen.findByTestId('planner-empty-tasks')).toBeTruthy();
     fireEvent.press(screen.getByRole('tab', { name: 'Notas' }));
-    expect(screen.getByTestId('planner-empty-notes')).toBeTruthy();
+    expect(await screen.findByTestId('planner-empty-notes')).toBeTruthy();
     fireEvent.press(screen.getByRole('tab', { name: 'Calendario' }));
-    expect(screen.getByTestId('planner-empty-calendar')).toBeTruthy();
+    expect(await screen.findByTestId('planner-empty-calendar')).toBeTruthy();
   });
 });

@@ -191,6 +191,9 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: unknown; count?: 
         const val = rest.join('.');
         if (op === 'ilike') return String(r[col] ?? '').toLowerCase().includes(val.replace(/%/g, '').toLowerCase());
         if (op === 'eq') return String(r[col]) === val;
+        if (op === 'neq') return String(r[col]) !== val;
+        if (op === 'gte') return r[col] !== null && r[col] !== undefined && String(r[col]) >= val;
+        if (op === 'lte') return r[col] !== null && r[col] !== undefined && String(r[col]) <= val;
         return false;
       }),
     );
