@@ -2,6 +2,7 @@ import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useNotificationSync } from '@/features/reminders/useNotificationSync';
 import { AppProviders } from '@/providers/AppProviders';
@@ -37,6 +38,7 @@ function RootStack() {
   return (
     <>
       {status === 'signedIn' ? <SignedInEffects /> : null}
+      {status === 'signedIn' ? <OfflineBanner /> : null}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { cancelAllOurs } from '@/features/reminders/notifications';
+import { clearPersistedCache } from '@/lib/queryPersister';
 import { supabase as defaultClient } from '@/lib/supabase';
 import { authErrorMessage } from './validation';
 
@@ -100,6 +101,8 @@ export function AuthProvider({ children, client = defaultClient }: AuthProviderP
     await cancelAllOurs().catch(() => {});
     const { error } = await client.auth.signOut();
     queryClient.clear();
+    // La caché guardada en el teléfono tampoco debe quedar para la próxima cuenta.
+    await clearPersistedCache().catch(() => {});
     return error ? { ok: false, message: authErrorMessage(error) } : { ok: true };
   }, [client, queryClient]);
 

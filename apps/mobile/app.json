@@ -23,7 +23,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "SCHEDULE_EXACT_ALARM"
-      ]
+      ],
+      "allowBackup": false
     },
     "web": {
       "output": "single",

@@ -1,3 +1,4 @@
+// @ts-nocheck — fábricas de jest.mock sin tipos (el plugin de hoisting no admite anotaciones dentro).
 // Las fuentes de iconos se cargan de forma asíncrona y provocan avisos de act()
 // que no reflejan un error de la app. En pruebas se consideran ya cargadas.
 jest.mock('expo-font', () => {
@@ -35,5 +36,28 @@ jest.mock('expo-notifications', () => {
       scheduled.delete(id);
     }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  };
+});
+
+// Almacenamiento del teléfono en memoria (mock oficial de AsyncStorage).
+jest.mock('@react-native-async-storage/async-storage', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- las fábricas de jest.mock usan require
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+// Red falsa controlable desde las pruebas (setNetwork en src/test/network.ts).
+jest.mock('@react-native-community/netinfo', () => {
+  const mockNet = { state: { isConnected: true, isInternetReachable: true }, listeners: new Set() };
+  globalThis.__net = mockNet;
+  return {
+    __esModule: true,
+    default: {
+      addEventListener: (cb) => {
+        mockNet.listeners.add(cb);
+        cb(mockNet.state);
+        return () => mockNet.listeners.delete(cb);
+      },
+      fetch: async () => mockNet.state,
+    },
   };
 });

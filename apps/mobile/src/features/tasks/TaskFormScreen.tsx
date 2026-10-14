@@ -7,6 +7,7 @@ import { Badge, Button, Chip, DateTimeField, Notice, Screen, Text, TextField } f
 import { useUserTimeZone } from '@/features/profile/api';
 import { localDayKey } from '@/lib/dates';
 import { validate, type FieldErrors } from '@/lib/validation';
+import { OFFLINE_SAVE_MESSAGE, useIsOnline } from '@/lib/network';
 import { spacing } from '@/theme';
 import { useCreateTask, useDeleteTask, useRescheduleTask, useSetTaskStatus, useUpdateTask } from './api';
 import { dueLabel, localTime, priorityMeta, quickDue, zonedToUtcIso, type QuickDue } from './logic';
@@ -43,6 +44,8 @@ const quickOptions: { key: QuickDue | 'none'; label: string }[] = [
 ];
 
 export function TaskFormScreen({ task }: { task?: Task }) {
+  const online = useIsOnline();
+  const [offlineTried, setOfflineTried] = useState(false);
   const tz = useUserTimeZone();
   const [values, setValues] = useState<Values>({
     title: task?.title ?? '',
@@ -76,14 +79,27 @@ export function TaskFormScreen({ task }: { task?: Task }) {
   }
 
   async function save() {
+    if (!online) {
+      setOfflineTried(true);
+      return;
+    }
+    setOfflineTried(false);
     const { data, errors: e } = validate(taskSchema, values);
     setErrors(e);
     if (!data) return;
-    const input = { title: data.title, description: data.description, priority: values.priority, due_at: values.due_at };
+    const input = {
+      title: data.title,
+      description: data.description,
+      priority: values.priority,
+      due_at: values.due_at,
+    };
     try {
       if (task) {
         if (dueChanged) await reschedule.reschedule(task.id, values.due_at);
-        await update.mutateAsync({ id: task.id, patch: { title: input.title, description: input.description, priority: input.priority } });
+        await update.mutateAsync({
+          id: task.id,
+          patch: { title: input.title, description: input.description, priority: input.priority },
+        });
       } else {
         await create.mutateAsync(input);
       }
@@ -158,7 +174,13 @@ export function TaskFormScreen({ task }: { task?: Task }) {
         </Text>
         <View style={styles.wrap}>
           {quickOptions.map((o) => (
-            <Chip key={o.key} label={o.label} selected={selectedQuick(o.key)} onPress={() => pickQuick(o.key)} testID={`due-${o.key}`} />
+            <Chip
+              key={o.key}
+              label={o.label}
+              selected={selectedQuick(o.key)}
+              onPress={() => pickQuick(o.key)}
+              testID={`due-${o.key}`}
+            />
           ))}
         </View>
         <DateTimeField
@@ -171,14 +193,24 @@ export function TaskFormScreen({ task }: { task?: Task }) {
         {values.due_at ? (
           <Text variant="caption" color="textMuted">
             {dueLabel({ due_at: values.due_at, status: 'todo' }, now, tz)}
-            {task && task.rescheduled_count > 0 ? ` · reprogramada ${task.rescheduled_count} ${task.rescheduled_count === 1 ? 'vez' : 'veces'}` : ''}
+            {task && task.rescheduled_count > 0
+              ? ` · reprogramada ${task.rescheduled_count} ${task.rescheduled_count === 1 ? 'vez' : 'veces'}`
+              : ''}
           </Text>
         ) : null}
       </View>
 
+      {offlineTried && !online ? <Notice tone="info" message={OFFLINE_SAVE_MESSAGE} testID="offline-save" /> : null}
       {failed ? <Notice tone="error" message="No se pudo guardar. Revisa tu conexión e inténtalo de nuevo." /> : null}
 
-      <Button label={task ? 'Guardar cambios' : 'Crear tarea'} icon="checkmark" onPress={save} loading={saving} fullWidth testID="save-task" />
+      <Button
+        label={task ? 'Guardar cambios' : 'Crear tarea'}
+        icon="checkmark"
+        onPress={save}
+        loading={saving}
+        fullWidth
+        testID="save-task"
+      />
 
       {task ? (
         <View style={styles.actions}>
@@ -193,7 +225,14 @@ export function TaskFormScreen({ task }: { task?: Task }) {
             }}
             testID="toggle-task-done"
           />
-          <Button label="Eliminar" icon="trash-outline" variant="danger" grow onPress={handleDelete} testID="delete-task" />
+          <Button
+            label="Eliminar"
+            icon="trash-outline"
+            variant="danger"
+            grow
+            onPress={handleDelete}
+            testID="delete-task"
+          />
         </View>
       ) : null}
     </Screen>

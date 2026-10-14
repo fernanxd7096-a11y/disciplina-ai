@@ -4,7 +4,7 @@
  * Actualizar cuando una función quede implementada y probada.
  */
 export const featurePhase = {
-  auth: 3,
+  auth: 3, // implementado (3a)
   habits: 3, // implementado (3b)
   notes: 3, // implementado (3c)
   tasks: 3, // implementado (3c)

@@ -7,6 +7,7 @@ import { useUserTimeZone } from '@/features/profile/api';
 import { getPermission, requestPermission } from '@/features/reminders/notifications';
 import { localTime, zonedToUtcIso } from '@/features/tasks/logic';
 import { localDayKey } from '@/lib/dates';
+import { OFFLINE_SAVE_MESSAGE, useIsOnline } from '@/lib/network';
 import { spacing } from '@/theme';
 import { useDeleteEvent, useNotificationPrefs, useReminders, useSaveEvent } from './api';
 import { allDayRange, reminderLabel, reminderOptions } from './logic';
@@ -44,6 +45,8 @@ function nextHalfHour(day: string, tz: string): string {
 }
 
 export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; initialDay?: string }) {
+  const online = useIsOnline();
+  const [offlineTried, setOfflineTried] = useState(false);
   const tz = useUserTimeZone();
   const prefs = useNotificationPrefs();
   const allReminders = useReminders();
@@ -55,7 +58,9 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
   const [title, setTitle] = useState(event?.title ?? '');
   const [allDay, setAllDay] = useState(event?.all_day ?? false);
   const [startsAt, setStartsAt] = useState(start0);
-  const [endsAt, setEndsAt] = useState(event?.ends_at ?? new Date(new Date(start0).getTime() + 3_600_000).toISOString());
+  const [endsAt, setEndsAt] = useState(
+    event?.ends_at ?? new Date(new Date(start0).getTime() + 3_600_000).toISOString(),
+  );
   const [location, setLocation] = useState(event?.location ?? '');
   const [notes, setNotes] = useState(event?.notes ?? '');
   // null = el usuario aún no tocó los avisos (se muestran los guardados o los predeterminados).
@@ -90,6 +95,11 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
   }
 
   async function submit() {
+    if (!online) {
+      setOfflineTried(true);
+      return;
+    }
+    setOfflineTried(false);
     const e: typeof errors = {};
     if (!title.trim()) e.title = 'Ponle un nombre al evento.';
     let range = { starts_at: startsAt, ends_at: endsAt };
@@ -132,10 +142,25 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
     <Screen testID="event-form-screen" edges={[]}>
       <Stack.Screen options={{ title: event ? 'Editar evento' : 'Nuevo evento' }} />
 
-      <TextField label="Evento" value={title} onChangeText={setTitle} error={errors.title} placeholder="Ej.: Clase de redes" maxLength={120} autoFocus={!event} testID="event-title" />
+      <TextField
+        label="Evento"
+        value={title}
+        onChangeText={setTitle}
+        error={errors.title}
+        placeholder="Ej.: Clase de redes"
+        maxLength={120}
+        autoFocus={!event}
+        testID="event-title"
+      />
 
       <View style={styles.row}>
-        <Chip label="Todo el día" icon="sunny-outline" selected={allDay} onPress={() => setAllDay((v) => !v)} testID="event-all-day" />
+        <Chip
+          label="Todo el día"
+          icon="sunny-outline"
+          selected={allDay}
+          onPress={() => setAllDay((v) => !v)}
+          testID="event-all-day"
+        />
       </View>
 
       <DateTimeField
@@ -161,7 +186,15 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
       ) : null}
 
       <TextField label="Ubicación (opcional)" value={location} onChangeText={setLocation} maxLength={200} />
-      <TextField label="Notas (opcional)" value={notes} onChangeText={setNotes} multiline style={styles.multiline} textAlignVertical="top" maxLength={2000} />
+      <TextField
+        label="Notas (opcional)"
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+        style={styles.multiline}
+        textAlignVertical="top"
+        maxLength={2000}
+      />
 
       <View style={styles.block}>
         <Text variant="label" color="textSecondary">
@@ -184,14 +217,20 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
             <Text variant="body" style={styles.flex}>
               {reminderLabel(r, tz)}
             </Text>
-            <Button label="Quitar" variant="ghost" onPress={() => setReminders(effectiveReminders.filter((x) => x !== r))} />
+            <Button
+              label="Quitar"
+              variant="ghost"
+              onPress={() => setReminders(effectiveReminders.filter((x) => x !== r))}
+            />
           </View>
         ))}
         <DateTimeField
           label="Añadir aviso a una hora exacta"
           value={null}
           display={null}
-          onChange={(day, time) => setReminders([...effectiveReminders, { offset_minutes: null, remind_at: zonedToUtcIso(day, time, tz) }])}
+          onChange={(day, time) =>
+            setReminders([...effectiveReminders, { offset_minutes: null, remind_at: zonedToUtcIso(day, time, tz) }])
+          }
           testID="event-custom-reminder"
         />
         <Text variant="caption" color="textMuted">
@@ -200,12 +239,34 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
       </View>
 
       {permissionWarning ? (
-        <Notice tone="info" message="Las notificaciones están desactivadas para la app. Actívalas en Ajustes para recibir estos avisos." />
+        <Notice
+          tone="info"
+          message="Las notificaciones están desactivadas para la app. Actívalas en Ajustes para recibir estos avisos."
+        />
       ) : null}
-      {save.isError || remove.isError ? <Notice tone="error" message="No se pudo guardar. Revisa tu conexión e inténtalo de nuevo." /> : null}
+      {offlineTried && !online ? <Notice tone="info" message={OFFLINE_SAVE_MESSAGE} testID="offline-save" /> : null}
+      {save.isError || remove.isError ? (
+        <Notice tone="error" message="No se pudo guardar. Revisa tu conexión e inténtalo de nuevo." />
+      ) : null}
 
-      <Button label={event ? 'Guardar cambios' : 'Crear evento'} icon="checkmark" onPress={submit} loading={save.isPending} fullWidth testID="save-event" />
-      {event ? <Button label="Eliminar evento" icon="trash-outline" variant="danger" onPress={handleDelete} loading={remove.isPending} testID="delete-event" /> : null}
+      <Button
+        label={event ? 'Guardar cambios' : 'Crear evento'}
+        icon="checkmark"
+        onPress={submit}
+        loading={save.isPending}
+        fullWidth
+        testID="save-event"
+      />
+      {event ? (
+        <Button
+          label="Eliminar evento"
+          icon="trash-outline"
+          variant="danger"
+          onPress={handleDelete}
+          loading={remove.isPending}
+          testID="delete-event"
+        />
+      ) : null}
     </Screen>
   );
 }

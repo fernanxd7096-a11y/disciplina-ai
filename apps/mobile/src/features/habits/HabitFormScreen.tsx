@@ -16,6 +16,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { validate, type FieldErrors } from '@/lib/validation';
+import { OFFLINE_SAVE_MESSAGE, useIsOnline } from '@/lib/network';
 import { spacing } from '@/theme';
 import { useCreateHabit, useUpdateHabit } from './api';
 import { categories, categoryMeta, habitPresets, scheduleLabel, weekDays } from './presets';
@@ -56,6 +57,8 @@ function fromHabit(h: Habit): FormValues {
 }
 
 export function HabitFormScreen({ habit }: { habit?: Habit }) {
+  const online = useIsOnline();
+  const [offlineTried, setOfflineTried] = useState(false);
   const editing = Boolean(habit);
   const [values, setValues] = useState<FormValues>(habit ? fromHabit(habit) : blank);
   const [errors, setErrors] = useState<FieldErrors<FormValues>>({});
@@ -67,10 +70,18 @@ export function HabitFormScreen({ habit }: { habit?: Habit }) {
   const set = <K extends keyof FormValues>(k: K, v: FormValues[K]) => setValues((old) => ({ ...old, [k]: v }));
 
   function toggleDay(d: number) {
-    set('days_of_week', values.days_of_week.includes(d) ? values.days_of_week.filter((x) => x !== d) : [...values.days_of_week, d]);
+    set(
+      'days_of_week',
+      values.days_of_week.includes(d) ? values.days_of_week.filter((x) => x !== d) : [...values.days_of_week, d],
+    );
   }
 
   async function save() {
+    if (!online) {
+      setOfflineTried(true);
+      return;
+    }
+    setOfflineTried(false);
     const { data, errors: e } = validate(habitSchema, values);
     setErrors(e);
     if (!data) return;
@@ -154,7 +165,11 @@ export function HabitFormScreen({ habit }: { habit?: Habit }) {
           accessibilityLabel="Frecuencia"
           value={values.frequency}
           onChange={(f) =>
-            setValues((old) => ({ ...old, frequency: f, target_per_period: f === 'weekly' ? Math.min(Math.max(old.target_per_period, 3), 7) : 1 }))
+            setValues((old) => ({
+              ...old,
+              frequency: f,
+              target_per_period: f === 'weekly' ? Math.min(Math.max(old.target_per_period, 3), 7) : 1,
+            }))
           }
           options={[
             { value: 'daily', label: 'Días concretos' },
@@ -248,10 +263,13 @@ export function HabitFormScreen({ habit }: { habit?: Habit }) {
         </Text>
         <Text variant="bodyStrong">
           {values.name.trim() || 'Tu hábito'} · {scheduleLabel(values)}
-          {counter && values.target_per_period > 1 ? ` · ${values.target_per_period} ${values.unit || 'veces'} al día` : ''}
+          {counter && values.target_per_period > 1
+            ? ` · ${values.target_per_period} ${values.unit || 'veces'} al día`
+            : ''}
         </Text>
       </Card>
 
+      {offlineTried && !online ? <Notice tone="info" message={OFFLINE_SAVE_MESSAGE} testID="offline-save" /> : null}
       {failed ? <Notice tone="error" message="No se pudo guardar. Revisa tu conexión e inténtalo de nuevo." /> : null}
 
       <Button

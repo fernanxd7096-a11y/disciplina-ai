@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, StyleSheet, TextInput, View } from 'react-native';
 
 import { IconButton, Notice, Screen, Text } from '@/components/ui';
+import { useIsOnline } from '@/lib/network';
 import { colors, spacing, typography } from '@/theme';
 import { useSaveNote } from './api';
 import { isEmptyNote, type Note } from './logic';
@@ -42,6 +43,7 @@ const stateLabel: Record<SaveState, string> = {
  */
 export function NoteEditorScreen({ note }: { note?: Note }) {
   const save = useSaveNote();
+  const online = useIsOnline();
   const [title, setTitle] = useState(note?.title ?? '');
   const [body, setBody] = useState(note?.body ?? '');
   const [pinned, setPinned] = useState(note?.pinned ?? false);
@@ -91,7 +93,8 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
       if (timer.current) clearTimeout(timer.current);
       const { title: t, body: b } = latest.current;
       if (isEmptyNote({ title: t, body: b })) {
-        if (idRef.current) void saveRef.current({ id: idRef.current, patch: { deleted_at: new Date().toISOString() } }).catch(() => {});
+        if (idRef.current)
+          void saveRef.current({ id: idRef.current, patch: { deleted_at: new Date().toISOString() } }).catch(() => {});
       } else {
         void persist().catch(() => {});
       }
@@ -163,7 +166,12 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
                 }}
                 testID="archive-note"
               />
-              <IconButton icon="trash-outline" accessibilityLabel="Eliminar nota" onPress={handleDelete} testID="delete-note" />
+              <IconButton
+                icon="trash-outline"
+                accessibilityLabel="Eliminar nota"
+                onPress={handleDelete}
+                testID="delete-note"
+              />
             </View>
           ),
         }}
@@ -171,12 +179,17 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
 
       <View style={styles.status} accessibilityLiveRegion="polite">
         <Text variant="caption" color={state === 'error' ? 'danger' : 'textMuted'} testID="note-save-state">
-          {stateLabel[state]}
+          {!online && (state === 'pending' || state === 'saving')
+            ? 'Sin conexión · se guardará al reconectar'
+            : stateLabel[state]}
           {archived ? ' · Archivada' : ''}
         </Text>
       </View>
       {state === 'error' ? (
-        <Notice tone="error" message="Sin conexión con el servidor. Tu texto sigue aquí; se guardará cuando vuelvas a editar." />
+        <Notice
+          tone="error"
+          message="Sin conexión con el servidor. Tu texto sigue aquí; se guardará cuando vuelvas a editar."
+        />
       ) : null}
 
       <TextInput
