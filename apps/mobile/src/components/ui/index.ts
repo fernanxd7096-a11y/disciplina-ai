@@ -2,6 +2,7 @@ export { Badge } from './Badge';
 export { Button, type ButtonProps } from './Button';
 export { Card } from './Card';
 export { IconButton } from './IconButton';
+export { Notice } from './Notice';
 export { progressPercent, progressRatio } from './progress';
 export { ProgressRing } from './ProgressRing';
 export { Screen } from './Screen';

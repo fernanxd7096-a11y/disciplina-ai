@@ -13,7 +13,7 @@ import {
   SectionHeader,
   Text,
 } from '@/components/ui';
-import { useDeviceTimeZone } from '@/hooks/useDeviceTimeZone';
+import { useUserTimeZone } from '@/features/profile/api';
 import { useNow } from '@/hooks/useNow';
 import { formatLongDate, greeting } from '@/lib/dates';
 import { phaseNotice, type Feature } from '@/lib/roadmap';
@@ -35,7 +35,7 @@ const domains: DomainRow[] = [
 
 export function DashboardScreen() {
   const now = useNow();
-  const timeZone = useDeviceTimeZone();
+  const timeZone = useUserTimeZone();
 
   return (
     <Screen testID="dashboard-screen">

@@ -2,33 +2,53 @@ import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { useAuth } from '@/features/auth/AuthProvider';
 import { AppProviders } from '@/providers/AppProviders';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useEffect(() => {
-    // Sin fuentes ni sesión que cargar todavía: se oculta al montar.
-    // En la Fase 3 esperará a que se restaure la sesión de Supabase.
-    SplashScreen.hideAsync();
-  }, []);
-
   return (
     <AppProviders>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}>
+      <RootStack />
+    </AppProviders>
+  );
+}
+
+function RootStack() {
+  const { status } = useAuth();
+
+  useEffect(() => {
+    // La pantalla de carga se mantiene hasta saber si hay sesión guardada.
+    if (status !== 'loading') SplashScreen.hideAsync();
+  }, [status]);
+
+  if (status === 'loading') return null;
+
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}>
+      <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="assistant" options={{ title: 'Asistente', presentation: 'modal' }} />
         <Stack.Screen name="stats" options={{ title: 'Estadísticas' }} />
         <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
-      </Stack>
-    </AppProviders>
+      </Stack.Protected>
+
+      <Stack.Protected guard={status === 'signedOut'}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={status === 'unconfigured'}>
+        <Stack.Screen name="setup" options={{ headerShown: false }} />
+      </Stack.Protected>
+    </Stack>
   );
 }
