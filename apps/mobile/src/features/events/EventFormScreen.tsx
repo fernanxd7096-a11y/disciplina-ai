@@ -6,12 +6,13 @@ import { Button, Chip, DateTimeField, Notice, Screen, Text, TextField } from '@/
 import { useUserTimeZone } from '@/features/profile/api';
 import { getPermission, requestPermission } from '@/features/reminders/notifications';
 import { localTime, zonedToUtcIso } from '@/features/tasks/logic';
+import { LinkedNotes } from '@/features/organize/links';
 import { localDayKey } from '@/lib/dates';
 import { OFFLINE_SAVE_MESSAGE, useIsOnline } from '@/lib/network';
 import { spacing } from '@/theme';
 import { useDeleteEvent, useNotificationPrefs, useReminders, useSaveEvent } from './api';
-import { allDayRange, reminderLabel, reminderOptions } from './logic';
-import type { CalendarEvent, ReminderDraft } from './types';
+import { allDayRange, recurrenceLabels, reminderLabel, reminderOptions } from './logic';
+import type { CalendarEvent, Recurrence, ReminderDraft } from './types';
 
 function goBack() {
   if (router.canGoBack()) router.back();
@@ -63,6 +64,8 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
   );
   const [location, setLocation] = useState(event?.location ?? '');
   const [notes, setNotes] = useState(event?.notes ?? '');
+  const [recurrence, setRecurrence] = useState<Recurrence>(event?.recurrence ?? 'none');
+  const [until, setUntil] = useState<string | null>(event?.recurrence_until ?? null);
   // null = el usuario aún no tocó los avisos (se muestran los guardados o los predeterminados).
   const [reminders, setReminders] = useState<ReminderDraft[] | null>(null);
   const [errors, setErrors] = useState<{ title?: string; ends?: string }>({});
@@ -117,7 +120,7 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
     try {
       await save.mutateAsync({
         id: event?.id,
-        input: { title, ...range, all_day: allDay, location, notes, timezone: tz },
+        input: { title, ...range, all_day: allDay, location, notes, timezone: tz, recurrence, recurrence_until: recurrence === 'none' ? null : until },
         reminders: effectiveReminders,
       });
       goBack();
@@ -184,6 +187,35 @@ export function EventFormScreen({ event, initialDay }: { event?: CalendarEvent; 
           {errors.ends}
         </Text>
       ) : null}
+
+      <View style={styles.block}>
+        <Text variant="label" color="textSecondary">
+          Repetir
+        </Text>
+        <View style={styles.wrap}>
+          {(Object.keys(recurrenceLabels) as Recurrence[]).map((r) => (
+            <Chip key={r} label={recurrenceLabels[r]} selected={recurrence === r} onPress={() => setRecurrence(r)} testID={`recurrence-${r}`} />
+          ))}
+        </View>
+        {recurrence !== 'none' ? (
+          <>
+            <DateTimeField
+              label="Hasta (opcional)"
+              mode="date"
+              value={until ? zonedToUtcIso(until, '12:00', tz) : null}
+              display={until ? { date: fmtDate(zonedToUtcIso(until, '12:00', tz), tz), time: '' } : null}
+              onChange={(day) => setUntil(day)}
+              testID="recurrence-until"
+            />
+            {until ? <Button label="Sin fecha de fin" variant="ghost" onPress={() => setUntil(null)} /> : null}
+            <Text variant="caption" color="textMuted">
+              Los avisos se programan para cada repetición. Editar o borrar afecta a toda la serie.
+            </Text>
+          </>
+        ) : null}
+      </View>
+
+      {event ? <LinkedNotes eventId={event.id} /> : null}
 
       <TextField label="Ubicación (opcional)" value={location} onChangeText={setLocation} maxLength={200} />
       <TextField

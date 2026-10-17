@@ -4,7 +4,7 @@ import { useSessionClient } from '@/features/auth/AuthProvider';
 import { diffReminders } from './logic';
 import type { CalendarEvent, EventInput, Reminder, ReminderDraft } from './types';
 
-const EVENT_COLS = 'id, user_id, title, starts_at, ends_at, all_day, location, notes, timezone, category_id, created_at, updated_at, deleted_at';
+const EVENT_COLS = 'id, user_id, title, starts_at, ends_at, all_day, location, notes, timezone, category_id, recurrence, recurrence_until, created_at, updated_at, deleted_at';
 const REMINDER_COLS = 'id, user_id, event_id, task_id, offset_minutes, remind_at, enabled, deleted_at';
 
 export const eventKeys = {
@@ -13,7 +13,7 @@ export const eventKeys = {
   prefs: (uid: string) => ['notificationPrefs', uid] as const,
 };
 
-/** Eventos desde hace 60 días en adelante (suficiente para las vistas y los avisos). */
+/** Eventos desde hace 60 días en adelante, más todos los recurrentes (sus repeticiones se calculan en la app). */
 export function useEvents() {
   const { client, user } = useSessionClient();
   return useQuery({
@@ -24,10 +24,10 @@ export function useEvents() {
         .from('events')
         .select(EVENT_COLS)
         .is('deleted_at', null)
-        .gte('ends_at', since)
+        .or(`ends_at.gte.${since},recurrence.neq.none`)
         .order('starts_at', { ascending: true });
       if (error) throw error;
-      return (data ?? []) as CalendarEvent[];
+      return ((data ?? []) as CalendarEvent[]).map((e) => ({ ...e, recurrence: e.recurrence ?? 'none', recurrence_until: e.recurrence_until ?? null }));
     },
   });
 }

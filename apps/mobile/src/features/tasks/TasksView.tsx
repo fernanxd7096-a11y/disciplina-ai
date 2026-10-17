@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, Notice, SectionHeader } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorState, LoadingState, Notice, SectionHeader, Text } from '@/components/ui';
 import { useUserTimeZone } from '@/features/profile/api';
 import { useNow } from '@/hooks/useNow';
 import { localDayKey } from '@/lib/dates';
+import { OrganizeFilter, useOrganizeMatcher, type OrganizeSelection } from '@/features/organize/OrganizeFilter';
 import { spacing } from '@/theme';
 import { useRescheduleTask, useSetTaskStatus, useTasks } from './api';
 import { groupLabels, groupTasks, localTime, zonedToUtcIso } from './logic';
@@ -22,14 +23,17 @@ export function TasksView() {
   const [showAllDone, setShowAllDone] = useState(false);
   const [moving, setMoving] = useState(false);
 
-  const groups = useMemo(() => groupTasks(tasks.data ?? [], now, tz), [tasks.data, now, tz]);
+  const [org, setOrg] = useState<OrganizeSelection>({ categoryId: null, tagId: null });
+  const matches = useOrganizeMatcher('task', org);
+  const filtered = (tasks.data ?? []).filter(matches);
+  const groups = groupTasks(filtered, now, tz);
 
   if (tasks.isLoading) return <LoadingState label="Cargando tareas…" />;
   if (tasks.error && !tasks.data) {
     return <ErrorState message="No se pudieron cargar tus tareas. Revisa tu conexión." onRetry={() => tasks.refetch()} />;
   }
 
-  if (groups.length === 0) {
+  if ((tasks.data ?? []).length === 0) {
     return (
       <Card>
         <EmptyState
@@ -63,6 +67,12 @@ export function TasksView() {
 
   return (
     <View style={styles.list} testID="tasks-view">
+      <OrganizeFilter kind="task" value={org} onChange={setOrg} />
+      {groups.length === 0 ? (
+        <Text variant="caption" color="textMuted">
+          Ninguna tarea con ese filtro.
+        </Text>
+      ) : null}
       {setStatus.isError || reschedule.isError ? (
         <Notice tone="error" message="No se pudo guardar el último cambio. Inténtalo de nuevo." />
       ) : null}

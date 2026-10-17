@@ -1,18 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Card, Chip, EmptyState, ErrorState, LoadingState, Text } from '@/components/ui';
 import { colors, minTouchSize, radius, spacing, typography } from '@/theme';
 import { useNotes } from './api';
+import { OrganizeFilter, useOrganizeMatcher, type OrganizeSelection } from '@/features/organize/OrganizeFilter';
 import { displayTitle, filterNotes, preview } from './logic';
 
 export function NotesView() {
   const notes = useNotes();
   const [query, setQuery] = useState('');
   const [archived, setArchived] = useState(false);
-  const list = useMemo(() => filterNotes(notes.data ?? [], query, archived), [notes.data, query, archived]);
+  const [org, setOrg] = useState<OrganizeSelection>({ categoryId: null, tagId: null });
+  const matches = useOrganizeMatcher('note', org);
+  const list = filterNotes(notes.data ?? [], query, archived).filter(matches);
   const total = notes.data?.length ?? 0;
 
   if (notes.isLoading) return <LoadingState label="Cargando notas…" />;
@@ -54,6 +57,7 @@ export function NotesView() {
           </Pressable>
         ) : null}
       </View>
+      <OrganizeFilter kind="note" value={org} onChange={setOrg} />
       <View style={styles.filters}>
         <Chip label="Activas" selected={!archived} onPress={() => setArchived(false)} />
         <Chip label="Archivadas" icon="archive-outline" selected={archived} onPress={() => setArchived(true)} testID="notes-archived" />

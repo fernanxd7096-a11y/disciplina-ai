@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSessionClient } from '@/features/auth/AuthProvider';
 import type { Note } from './logic';
 
-const NOTE_COLS = 'id, user_id, title, body, pinned, archived_at, task_id, event_id, created_at, updated_at, deleted_at';
+const NOTE_COLS = 'id, user_id, title, body, pinned, archived_at, task_id, event_id, category_id, created_at, updated_at, deleted_at';
 
 export const noteKeys = { all: (uid: string) => ['notes', uid] as const };
 
@@ -24,7 +24,7 @@ export function useNotes() {
   });
 }
 
-type NotePatch = Partial<Pick<Note, 'title' | 'body' | 'pinned' | 'archived_at' | 'deleted_at'>>;
+type NotePatch = Partial<Pick<Note, 'title' | 'body' | 'pinned' | 'archived_at' | 'deleted_at' | 'task_id' | 'event_id' | 'category_id'>>;
 
 /**
  * Guardar una nota: crea si aún no tiene id, actualiza si ya existe.

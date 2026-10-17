@@ -4,7 +4,7 @@
  */
 import { localDayKey } from '@/lib/dates';
 import { zonedToUtcIso } from '@/features/tasks/logic';
-import type { CalendarEvent, ReminderDraft } from './types';
+import type { CalendarEvent, Recurrence, ReminderDraft } from './types';
 
 export function addDaysKey(key: string, n: number): string {
   const [y, m, d] = key.split('-').map(Number);
@@ -28,10 +28,54 @@ export function occursOn(e: Pick<CalendarEvent, 'starts_at' | 'ends_at'>, day: s
   return start <= day && day <= end;
 }
 
-/** Eventos de un día, de todo el día primero y luego por hora de inicio. */
+function localHHMM(iso: string, tz: string) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+}
+
+function addMonthsKey(day: string, n: number): string | null {
+  const [y, m, d] = day.split('-').map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  if (d > last) return null; // p. ej. 31 en un mes de 30 días: ese mes no se repite
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+export const recurrenceLabels: Record<Recurrence, string> = { none: 'No se repite', daily: 'Cada día', weekly: 'Cada semana', monthly: 'Cada mes' };
+
+/**
+ * Apariciones de un evento que tocan el rango [from, to] (días locales). Un
+ * evento sin repetición devuelve él mismo; uno recurrente, copias con su
+ * fecha desplazada manteniendo la hora local (correcto con horario de verano).
+ */
+export function expandEvent(e: CalendarEvent, from: string, to: string, tz: string): CalendarEvent[] {
+  if (e.deleted_at) return [];
+  if (!e.recurrence || e.recurrence === 'none') {
+    const s = localDayKey(new Date(e.starts_at), tz);
+    const en = localDayKey(new Date(e.ends_at), tz);
+    return s <= to && en >= from ? [e] : [];
+  }
+  const zone = e.timezone || tz;
+  const startDay = localDayKey(new Date(e.starts_at), zone);
+  const time = localHHMM(e.starts_at, zone);
+  const duration = new Date(e.ends_at).getTime() - new Date(e.starts_at).getTime();
+  const spanDays = Math.max(0, Math.round(duration / 86_400_000));
+  const out: CalendarEvent[] = [];
+  for (let k = 0; k < 2000; k++) {
+    const day = e.recurrence === 'daily' ? addDaysKey(startDay, k) : e.recurrence === 'weekly' ? addDaysKey(startDay, 7 * k) : addMonthsKey(startDay, k);
+    if (day === null) continue;
+    if (day > to || (e.recurrence_until && day > e.recurrence_until)) break;
+    if (addDaysKey(day, spanDays) < from) continue;
+    const starts = zonedToUtcIso(day, time, zone);
+    out.push({ ...e, starts_at: starts, ends_at: new Date(new Date(starts).getTime() + duration).toISOString() });
+  }
+  return out;
+}
+
+/** Eventos de un día (incluye repeticiones), de todo el día primero y luego por hora de inicio. */
 export function eventsOnDay(events: CalendarEvent[], day: string, tz: string): CalendarEvent[] {
   return events
-    .filter((e) => !e.deleted_at && occursOn(e, day, tz))
+    .flatMap((e) => expandEvent(e, day, day, tz))
+    .filter((e) => occursOn(e, day, tz))
     .sort((a, b) => Number(b.all_day) - Number(a.all_day) || a.starts_at.localeCompare(b.starts_at));
 }
 
@@ -124,7 +168,8 @@ export function nextEvent(events: CalendarEvent[], now: Date, tz: string): { eve
   const t = now.getTime();
   const today = localDayKey(now, tz);
   const candidates = events
-    .filter((e) => !e.deleted_at && new Date(e.ends_at).getTime() > t)
+    .flatMap((e) => expandEvent(e, today, addDaysKey(today, 62), tz))
+    .filter((e) => new Date(e.ends_at).getTime() > t)
     .filter((e) => !e.all_day || occursOn(e, today, tz))
     .sort((a, b) => Number(a.all_day) - Number(b.all_day) || a.starts_at.localeCompare(b.starts_at));
   const timed = candidates.find((e) => !e.all_day);

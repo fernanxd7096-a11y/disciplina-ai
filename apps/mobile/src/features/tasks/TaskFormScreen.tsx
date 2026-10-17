@@ -4,12 +4,16 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { Badge, Button, Chip, DateTimeField, Notice, Screen, Text, TextField } from '@/components/ui';
+import { useReminders } from '@/features/events/api';
+import { LinkedNotes } from '@/features/organize/links';
+import { OrganizePanel } from '@/features/organize/OrganizePanel';
 import { useUserTimeZone } from '@/features/profile/api';
+import { getPermission, requestPermission } from '@/features/reminders/notifications';
 import { localDayKey } from '@/lib/dates';
 import { validate, type FieldErrors } from '@/lib/validation';
 import { OFFLINE_SAVE_MESSAGE, useIsOnline } from '@/lib/network';
 import { spacing } from '@/theme';
-import { useCreateTask, useDeleteTask, useRescheduleTask, useSetTaskStatus, useUpdateTask } from './api';
+import { useCreateTask, useDeleteTask, useRescheduleTask, useSaveTaskReminders, useSetTaskStatus, useUpdateTask } from './api';
 import { dueLabel, localTime, priorityMeta, quickDue, zonedToUtcIso, type QuickDue } from './logic';
 import type { Task, TaskPriority } from './types';
 
@@ -36,6 +40,12 @@ function confirmDelete(): Promise<boolean> {
   );
 }
 
+const TASK_REMINDER_OPTIONS = [
+  { minutes: 0, label: 'A la hora' },
+  { minutes: 60, label: '1 h antes' },
+  { minutes: 1440, label: '1 día antes' },
+];
+
 const quickOptions: { key: QuickDue | 'none'; label: string }[] = [
   { key: 'none', label: 'Sin fecha' },
   { key: 'today', label: 'Hoy' },
@@ -54,6 +64,13 @@ export function TaskFormScreen({ task }: { task?: Task }) {
     due_at: task?.due_at ?? null,
   });
   const [errors, setErrors] = useState<FieldErrors<Values>>({});
+  const allReminders = useReminders();
+  const [categoryId, setCategoryId] = useState<string | null>(task?.category_id ?? null);
+  const saveReminders = useSaveTaskReminders();
+  // null = sin tocar: se muestran los avisos guardados de la tarea.
+  const [offsets, setOffsets] = useState<number[] | null>(null);
+  const currentOffsets =
+    offsets ?? (task ? (allReminders.data ?? []).filter((r) => r.task_id === task.id && r.offset_minutes != null).map((r) => r.offset_minutes!) : []);
   const create = useCreateTask();
   const update = useUpdateTask();
   const reschedule = useRescheduleTask();
@@ -94,6 +111,7 @@ export function TaskFormScreen({ task }: { task?: Task }) {
       due_at: values.due_at,
     };
     try {
+      let id = task?.id;
       if (task) {
         if (dueChanged) await reschedule.reschedule(task.id, values.due_at);
         await update.mutateAsync({
@@ -101,7 +119,14 @@ export function TaskFormScreen({ task }: { task?: Task }) {
           patch: { title: input.title, description: input.description, priority: input.priority },
         });
       } else {
-        await create.mutateAsync(input);
+        id = (await create.mutateAsync(input)).id;
+      }
+      if (id && (offsets !== null || !values.due_at)) {
+        await saveReminders.mutateAsync({ taskId: id, offsets: values.due_at ? currentOffsets : [] });
+        if (values.due_at && currentOffsets.length) {
+          const p = await getPermission().catch(() => 'undetermined' as const);
+          if (p === 'undetermined') await requestPermission().catch(() => null);
+        }
       }
       goBack();
     } catch {
@@ -191,6 +216,25 @@ export function TaskFormScreen({ task }: { task?: Task }) {
           testID="task-due"
         />
         {values.due_at ? (
+          <View style={styles.reminders}>
+            <Text variant="label" color="textSecondary">
+              Avisarme
+            </Text>
+            <View style={styles.reminderChips}>
+              {TASK_REMINDER_OPTIONS.map((o) => (
+                <Chip
+                  key={o.minutes}
+                  label={o.label}
+                  icon="notifications-outline"
+                  selected={currentOffsets.includes(o.minutes)}
+                  onPress={() => setOffsets(currentOffsets.includes(o.minutes) ? currentOffsets.filter((x) => x !== o.minutes) : [...currentOffsets, o.minutes])}
+                  testID={`task-reminder-${o.minutes}`}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {values.due_at ? (
           <Text variant="caption" color="textMuted">
             {dueLabel({ due_at: values.due_at, status: 'todo' }, now, tz)}
             {task && task.rescheduled_count > 0
@@ -199,6 +243,13 @@ export function TaskFormScreen({ task }: { task?: Task }) {
           </Text>
         ) : null}
       </View>
+
+      {task ? (
+        <>
+          <OrganizePanel kind="task" itemId={task.id} categoryId={categoryId} onCategory={(id) => { setCategoryId(id); update.mutate({ id: task.id, patch: { category_id: id } }); }} />
+          <LinkedNotes taskId={task.id} />
+        </>
+      ) : null}
 
       {offlineTried && !online ? <Notice tone="info" message={OFFLINE_SAVE_MESSAGE} testID="offline-save" /> : null}
       {failed ? <Notice tone="error" message="No se pudo guardar. Revisa tu conexión e inténtalo de nuevo." /> : null}
@@ -240,6 +291,8 @@ export function TaskFormScreen({ task }: { task?: Task }) {
 }
 
 const styles = StyleSheet.create({
+  reminders: { gap: spacing.sm },
+  reminderChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   multiline: { minHeight: 96, paddingTop: spacing.md },
   block: { gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

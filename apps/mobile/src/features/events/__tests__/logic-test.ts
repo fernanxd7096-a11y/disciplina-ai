@@ -1,4 +1,4 @@
-import { allDayRange, diffReminders, eventsOnDay, monthGrid, mondayOf, nextEvent, occursOn, reminderLabel, shiftMonth } from '../logic';
+import { allDayRange, diffReminders, eventsOnDay, expandEvent, monthGrid, mondayOf, nextEvent, occursOn, reminderLabel, shiftMonth } from '../logic';
 import type { CalendarEvent } from '../types';
 
 const TZ = 'America/Lima';
@@ -13,6 +13,8 @@ const ev = (over: Partial<CalendarEvent>): CalendarEvent => ({
   notes: null,
   timezone: TZ,
   category_id: null,
+  recurrence: 'none',
+  recurrence_until: null,
   created_at: '',
   updated_at: '',
   deleted_at: null,
@@ -106,5 +108,35 @@ describe('nextEvent', () => {
     expect(nextEvent([todo, luego], now, TZ)?.event.id).toBe('luego');
     expect(nextEvent([todo], now, TZ)?.event.id).toBe('todo');
     expect(nextEvent([], now, TZ)).toBeNull();
+  });
+});
+
+describe('eventos recurrentes', () => {
+  it('semanal: aparece cada semana a la misma hora local hasta la fecha de fin', () => {
+    const e = ev({ id: 'w', starts_at: '2026-10-13T15:00:00Z', ends_at: '2026-10-13T16:00:00Z', recurrence: 'weekly', recurrence_until: '2026-10-27' });
+    const occ = expandEvent(e, '2026-10-01', '2026-12-31', TZ);
+    expect(occ.map((o) => o.starts_at)).toEqual(['2026-10-13T15:00:00.000Z', '2026-10-20T15:00:00.000Z', '2026-10-27T15:00:00.000Z']);
+    expect(eventsOnDay([e], '2026-10-20', TZ)).toHaveLength(1);
+    expect(eventsOnDay([e], '2026-10-21', TZ)).toHaveLength(0);
+    expect(eventsOnDay([e], '2026-11-03', TZ)).toHaveLength(0);
+  });
+
+  it('mantiene la hora local al cambiar el horario de verano', () => {
+    // Madrid: 09:00 local el 20 oct (UTC+2) y el 3 nov (UTC+1)
+    const e = ev({ starts_at: '2026-10-20T07:00:00Z', ends_at: '2026-10-20T08:00:00Z', timezone: 'Europe/Madrid', recurrence: 'weekly' });
+    const occ = expandEvent(e, '2026-10-20', '2026-11-03', 'Europe/Madrid');
+    expect(occ.map((o) => o.starts_at)).toEqual(['2026-10-20T07:00:00.000Z', '2026-10-27T08:00:00.000Z', '2026-11-03T08:00:00.000Z']);
+  });
+
+  it('mensual el día 31 se salta los meses que no lo tienen', () => {
+    const e = ev({ starts_at: '2026-10-31T15:00:00Z', ends_at: '2026-10-31T16:00:00Z', recurrence: 'monthly' });
+    const days = expandEvent(e, '2026-10-01', '2027-01-31', TZ).map((o) => o.starts_at.slice(0, 10));
+    expect(days).toEqual(['2026-10-31', '2026-12-31', '2027-01-31']);
+  });
+
+  it('el próximo evento considera repeticiones', () => {
+    const e = ev({ starts_at: '2026-10-01T15:00:00Z', ends_at: '2026-10-01T16:00:00Z', recurrence: 'daily' });
+    const r = nextEvent([e], new Date('2026-10-13T17:00:00Z'), TZ);
+    expect(r?.event.starts_at).toBe('2026-10-14T15:00:00.000Z');
   });
 });

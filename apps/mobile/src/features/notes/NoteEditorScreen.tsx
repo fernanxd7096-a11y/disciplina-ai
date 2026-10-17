@@ -2,7 +2,9 @@ import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-import { IconButton, Notice, Screen, Text } from '@/components/ui';
+import { Card, IconButton, Notice, Screen, Text } from '@/components/ui';
+import { NoteLinkPicker } from '@/features/organize/links';
+import { OrganizePanel } from '@/features/organize/OrganizePanel';
 import { useIsOnline } from '@/lib/network';
 import { colors, spacing, typography } from '@/theme';
 import { useSaveNote } from './api';
@@ -49,6 +51,9 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [archived, setArchived] = useState(Boolean(note?.archived_at));
   const [state, setState] = useState<SaveState>('idle');
+  const [noteId, setNoteId] = useState<string | null>(note?.id ?? null);
+  const [organize, setOrganize] = useState(false);
+  const [meta, setMeta] = useState({ category_id: note?.category_id ?? null, task_id: note?.task_id ?? null, event_id: note?.event_id ?? null });
 
   const idRef = useRef<string | null>(note?.id ?? null);
   const latest = useRef({ title, body });
@@ -70,6 +75,7 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
     const run = (async () => {
       const saved = await saveRef.current({ id: idRef.current, patch: snapshot });
       idRef.current = saved.id;
+      setNoteId(saved.id);
       savedSnapshot.current = snapshot;
     })();
     if (!idRef.current) creating.current = run.finally(() => (creating.current = null));
@@ -125,6 +131,18 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
     }
   }
 
+  async function setMetaPatch(patch: Partial<typeof meta>) {
+    if (!idRef.current) return;
+    const prev = meta;
+    setMeta({ ...meta, ...patch });
+    try {
+      await save.mutateAsync({ id: idRef.current, patch });
+    } catch {
+      setMeta(prev);
+      setState('error');
+    }
+  }
+
   async function handleDelete() {
     if (!(await confirmDelete())) return;
     if (timer.current) clearTimeout(timer.current);
@@ -147,6 +165,13 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
           title: note ? 'Nota' : 'Nueva nota',
           headerRight: () => (
             <View style={styles.headerActions}>
+              <IconButton
+                icon={organize ? 'pricetags' : 'pricetags-outline'}
+                tone={organize ? 'accent' : 'default'}
+                accessibilityLabel="Organizar y vincular"
+                onPress={() => setOrganize(!organize)}
+                testID="organize-note"
+              />
               <IconButton
                 icon={pinned ? 'pin' : 'pin-outline'}
                 tone={pinned ? 'accent' : 'default'}
@@ -190,6 +215,21 @@ export function NoteEditorScreen({ note }: { note?: Note }) {
           tone="error"
           message="Sin conexión con el servidor. Tu texto sigue aquí; se guardará cuando vuelvas a editar."
         />
+      ) : null}
+
+      {organize ? (
+        <Card testID="note-organize">
+          {noteId ? (
+            <>
+              <OrganizePanel kind="note" itemId={noteId} categoryId={meta.category_id} onCategory={(id) => setMetaPatch({ category_id: id })} />
+              <NoteLinkPicker taskId={meta.task_id} eventId={meta.event_id} onChange={(l) => setMetaPatch(l)} />
+            </>
+          ) : (
+            <Text variant="caption" color="textMuted">
+              Escribe algo primero: la nota se guarda sola y luego podrás organizarla.
+            </Text>
+          )}
+        </Card>
       ) : null}
 
       <TextInput

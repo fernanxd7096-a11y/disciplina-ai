@@ -13,6 +13,7 @@ import type { Habit, HabitLog } from '@/features/habits/types';
 import { zonedToUtcIso } from '@/features/tasks/logic';
 import type { Task } from '@/features/tasks/types';
 import { localDayKey } from '@/lib/dates';
+import { expandEvent } from '@/features/events/logic';
 import type { CalendarEvent, Reminder } from '@/features/events/types';
 
 export const ID_PREFIX = 'dai:';
@@ -89,19 +90,24 @@ export function desiredNotifications(input: Input): PlannedNotification[] {
     if (!r.enabled || r.deleted_at) continue;
 
     if (r.event_id) {
-      const e = events.get(r.event_id);
-      if (!e) continue;
-      const fireAt = r.remind_at ? new Date(r.remind_at) : new Date(new Date(e.starts_at).getTime() - (r.offset_minutes ?? 0) * 60_000);
-      if (!inWindow(fireAt)) continue;
-      const when = e.all_day ? 'Todo el día' : `${timeLabel(e.starts_at, tz)}`;
-      out.push({
-        id: `${ID_PREFIX}event:${e.id}:${r.id}:${fireAt.getTime()}`,
-        fireAt,
-        title: e.title,
-        body: [r.remind_at ? when : `${offsetText(r.offset_minutes ?? 0)} · ${when}`, e.location].filter(Boolean).join(' · '),
-        channel: 'events',
-        url: `/event/${e.id}`,
-      });
+      const base = events.get(r.event_id);
+      if (!base) continue;
+      // Eventos recurrentes: un aviso por cada repetición dentro de la ventana.
+      // Una hora exacta (remind_at) solo aplica a la primera aparición.
+      const occurrences = r.remind_at ? [base] : expandEvent(base, localDayKey(now, tz), localDayKey(new Date(horizon + 2 * 86_400_000), tz), tz);
+      for (const e of occurrences) {
+        const fireAt = r.remind_at ? new Date(r.remind_at) : new Date(new Date(e.starts_at).getTime() - (r.offset_minutes ?? 0) * 60_000);
+        if (!inWindow(fireAt)) continue;
+        const when = e.all_day ? 'Todo el día' : `${timeLabel(e.starts_at, tz)}`;
+        out.push({
+          id: `${ID_PREFIX}event:${e.id}:${r.id}:${fireAt.getTime()}`,
+          fireAt,
+          title: e.title,
+          body: [r.remind_at ? when : `${offsetText(r.offset_minutes ?? 0)} · ${when}`, e.location].filter(Boolean).join(' · '),
+          channel: 'events',
+          url: `/event/${e.id}`,
+        });
+      }
     }
 
     if (r.task_id && prefs.task_reminders) {

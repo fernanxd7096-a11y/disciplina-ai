@@ -7,6 +7,7 @@ export type Note = {
   archived_at: string | null;
   task_id: string | null;
   event_id: string | null;
+  category_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

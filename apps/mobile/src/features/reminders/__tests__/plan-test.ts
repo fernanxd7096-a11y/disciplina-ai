@@ -19,6 +19,8 @@ const event = (over: Partial<CalendarEvent> = {}): CalendarEvent => ({
   notes: null,
   timezone: TZ,
   category_id: null,
+  recurrence: 'none',
+  recurrence_until: null,
   created_at: '',
   updated_at: '',
   deleted_at: null,
@@ -176,5 +178,24 @@ describe('reconcile', () => {
   it('cancela avisos obsoletos (evento movido o borrado) pero no toca los de otras apps', () => {
     const r = reconcile([], [`${ID_PREFIX}event:e1:r1:123`, 'otra-app-aviso']);
     expect(r.cancel).toEqual([`${ID_PREFIX}event:e1:r1:123`]);
+  });
+});
+
+describe('avisos de eventos recurrentes', () => {
+  it('programa un aviso por repetición dentro de la ventana, con identificadores distintos', () => {
+    const plan = desiredNotifications({
+      now,
+      timeZone: TZ,
+      events: [event({ recurrence: 'weekly', recurrence_until: null })],
+      reminders: [reminder({ offset_minutes: 60 })],
+      tasks: [],
+      habits: [],
+      habitLogs: [],
+      restDays: [],
+      prefs,
+    });
+    // 13 y 20 oct; el del 27 (13:00 Lima) cae fuera de la ventana de 14 días (termina el 27 a las 08:00)
+    expect(plan.map((n) => n.fireAt.toISOString())).toEqual(['2026-10-13T18:00:00.000Z', '2026-10-20T18:00:00.000Z']);
+    expect(new Set(plan.map((n) => n.id)).size).toBe(2);
   });
 });

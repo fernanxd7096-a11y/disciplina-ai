@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useSessionClient } from '@/features/auth/AuthProvider';
+import { eventKeys } from '@/features/events/api';
+import type { Reminder } from '@/features/events/types';
 import type { Task, TaskInput, TaskStatus } from './types';
 
 const TASK_COLS =
@@ -62,7 +64,7 @@ export function useUpdateTask() {
   const { client } = useSessionClient();
   const cache = useTaskCache();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<TaskInput> & { rescheduled_count?: number } }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<TaskInput> & { rescheduled_count?: number; category_id?: string | null } }) => {
       const clean = { ...patch };
       if (clean.title !== undefined) clean.title = clean.title.trim();
       if (clean.description !== undefined) clean.description = clean.description?.trim() || null;
@@ -124,5 +126,27 @@ export function useDeleteTask() {
       return id;
     },
     onSuccess: (id) => cache.qc.setQueryData<Task[]>(cache.key, (old = []) => old.filter((t) => t.id !== id)),
+  });
+}
+
+/** Avisos de una tarea (minutos antes de la fecha límite). Sincroniza con lo guardado. */
+export function useSaveTaskReminders() {
+  const { client, user } = useSessionClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ taskId, offsets }: { taskId: string; offsets: number[] }) => {
+      const saved = (qc.getQueryData<Reminder[]>(eventKeys.reminders(user.id)) ?? []).filter((r) => r.task_id === taskId && r.offset_minutes != null);
+      const remove = saved.filter((r) => !offsets.includes(r.offset_minutes!));
+      const add = offsets.filter((o) => !saved.some((r) => r.offset_minutes === o));
+      if (remove.length) {
+        const { error } = await client.from('reminders').delete().in('id', remove.map((r) => r.id));
+        if (error) throw error;
+      }
+      if (add.length) {
+        const { error } = await client.from('reminders').insert(add.map((o) => ({ task_id: taskId, offset_minutes: o })));
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: eventKeys.reminders(user.id) }),
   });
 }
