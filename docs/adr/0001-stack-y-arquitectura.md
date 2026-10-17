@@ -17,7 +17,7 @@
 | D8 | Las escrituras del asistente son propuestas que el usuario confirma. |
 | D9 | Monorepo pnpm: `apps/mobile`, `packages/shared`, `supabase/`. |
 
-El documento completo de la Fase 1 (modelo de datos, seguridad, riesgos, costos) está en Claude Docs: «DISCIPLINA AI — Fase 1: Arquitectura y plan».
+Decisiones de las Fases 4–6: [ADR 0002](0002-fases-4-a-6.md). El documento completo de la Fase 1 (modelo de datos, seguridad, riesgos, costos) está en Claude Docs: «DISCIPLINA AI — Fase 1: Arquitectura y plan».
 
 ## Ajustes respecto al plan original (Fase 2)
 
@@ -34,4 +34,4 @@ El documento completo de la Fase 1 (modelo de datos, seguridad, riesgos, costos)
 - **Recordatorios con un reconciliador** (`features/reminders/plan.ts`): en lugar de programar y olvidar, se calcula el conjunto de avisos deseado de los próximos 14 días y se compara con lo programado en el teléfono usando identificadores estables. Evita duplicados y maneja ediciones, borrados, cambios de zona y cierre de sesión. No hace falta la tabla `scheduled_notifications` del plan original.
 - **Rachas calculadas en la app** (funciones puras probadas) en lugar de vistas SQL: más fáciles de probar y funcionan sin conexión.
 - **Hábitos pausados** no generan avisos ni cuentan en estadísticas.
-- **Pendiente:** UI de categorías/etiquetas y vínculo nota↔tarea/evento (la base ya lo soporta); eventos recurrentes.
+- **Completado después (Fase 6):** UI de categorías/etiquetas, vínculo nota↔tarea/evento y eventos recurrentes (ver ADR 0002).

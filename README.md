@@ -1,6 +1,6 @@
 # DISCIPLINA AI
 
-Asistente personal de disciplina, organización, entrenamiento y nutrición. App Android (con arquitectura lista para iOS) hecha con Expo + Supabase.
+Asistente personal de disciplina, organización, entrenamiento y nutrición. App Android (con arquitectura lista para iOS) hecha con Expo + Supabase, con IA a través de un servidor seguro.
 
 ## Estado
 
@@ -8,28 +8,30 @@ Asistente personal de disciplina, organización, entrenamiento y nutrición. App
 | --- | --- | --- |
 | 1 | Arquitectura, modelo de datos, plan | ✅ Hecha |
 | 2 | Proyecto, navegación, sistema visual, pantallas, pruebas, CI | ✅ Hecha |
-| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline | ✅ Hecha · base aplicada en Supabase · APK instalado en Android (14 oct 2026) |
-| 4 | Entrenamiento y nutrición (incluye análisis de fotos) | Pendiente |
-| 5 | Asistente de IA con herramientas controladas | Pendiente |
-| 6 | Estadísticas, logros, ajustes, compilación final | Pendiente |
+| 3 | Auth, hábitos, notas, tareas, calendario, recordatorios, offline, categorías/etiquetas, vínculos, eventos recurrentes | ✅ Hecha |
+| 4 | Entrenamiento y nutrición (incluye análisis de fotos) | ✅ Hecha |
+| 5 | Asistente de IA con herramientas controladas | ✅ Hecha |
+| 6 | Estadísticas, logros, ajustes, privacidad, exportar/borrar cuenta | ✅ Hecha |
 
-**Qué funciona hoy (probado con 145 pruebas de app y 45 de base de datos):**
+Base de datos y Edge Functions aplicadas en Supabase (16 oct 2026). Para usar la IA falta poner la clave de Gemini (ver abajo).
 
-- Cuenta: registro, inicio de sesión, recuperar contraseña; sesión cifrada en el teléfono.
-- Hábitos: crear (con plantillas), días o veces por semana, contadores, rachas, días de descanso, pausar, historial editable, aviso diario.
-- Tareas: prioridad, fecha límite, atrasadas, mover a hoy, completar.
-- Notas: guardado automático, búsqueda, fijar, archivar.
-- Calendario: mes/semana/día, eventos con avisos (al empezar, 15 min, 1 h, 1 día u hora exacta), sin duplicados.
-- Inicio: progreso real del día, próximo evento con tiempo restante, tareas de hoy.
-- Sin conexión: ves tus datos; marcar hábitos y completar tareas se envía al reconectar.
+**Pruebas:** 216 de la app (Jest + Testing Library), 89 de la base (Postgres real) y 25 de las Edge Functions (Deno). Todas en CI.
 
-Entrenamiento, nutrición, asistente IA y estadísticas muestran en qué fase se activan. No hay datos de demostración.
+## Qué hace
+
+- **Inicio:** saludo, progreso real del día, disciplina y nivel, próximo evento, tareas de hoy, entrenamiento y nutrición del día, creación rápida y acceso al asistente.
+- **Hábitos:** días o veces por semana, contadores, rachas, descansos, pausar, historial, aviso diario.
+- **Agenda:** tareas con prioridad, fecha y avisos; notas con autoguardado, búsqueda, categorías, etiquetas y vínculo a tareas/eventos; calendario mes/semana/día con eventos recurrentes y avisos sin duplicados.
+- **Entrenamiento:** perfil físico, rutina base (reglas) o con IA validada, técnica paso a paso, errores frecuentes, alternativas por nivel, calentamiento y vuelta a la calma, registro de series y pesos, progresión sugerida, evolución (1RM estimado) e historial.
+- **Nutrición:** objetivo Mifflin-St Jeor con límites seguros, diario manual con buscador (USDA) y alimentos propios, **foto de comida** con alimentos, gramos (rango), confianza y advertencias, todo editable antes de guardar; sugerencias económicas; peso con gráfica y tendencia.
+- **Asistente IA:** chat con historial borrable, usa solo los datos que permitas, propone acciones (crear/reprogramar/completar) que tú confirmas.
+- **Estadísticas:** 7/30/90 días; hábitos, tiempo dedicado, tareas, entrenamiento, nutrición y peso; comparativa con el periodo anterior; XP, niveles y 19 logros; etiqueta de origen de cada dato (registrado, calculado, estimación IA).
+- **Ajustes:** perfil, región, notificaciones, reglas de disciplina, privacidad de la IA, conservar o no fotos, exportar todo en JSON, borrar la cuenta.
 
 ## Requisitos
 
-- Node.js 20 o superior (probado con 22)
-- pnpm 10 (`npm install -g pnpm`)
-- Un teléfono Android con la app **Expo Go**, o Android Studio con un emulador
+- Node.js 20 o superior (probado con 22) y pnpm (`npm install -g pnpm`)
+- Un teléfono Android (APK con EAS) o Android Studio con un emulador
 
 ## Ejecutar en desarrollo
 
@@ -37,14 +39,25 @@ Entrenamiento, nutrición, asistente IA y estadísticas muestran en qué fase se
 pnpm install
 cd apps/mobile
 cp .env.example .env      # pega tu "Publishable key" de Supabase (Project Settings → API Keys)
-pnpm start                # escanea el QR con Expo Go
+pnpm start
 ```
 
-### Base de datos (una sola vez)
+## Activar la IA (Gemini)
 
-Aplica `supabase/migrations/*.sql` en tu proyecto: en el panel de Supabase abre **SQL Editor**, pega el contenido del archivo y pulsa **Run**. O con la CLI: `npx supabase link --project-ref <ref>` y `npx supabase db push`.
+1. Crea una clave en <https://aistudio.google.com/apikey> (con tu cuenta de Google).
+2. En Supabase: **Edge Functions → Secrets → Add new secret**: nombre `GEMINI_API_KEY`, valor tu clave.
+3. Listo: fotos de comida, rutina con IA y asistente empiezan a funcionar. No hace falta recompilar la app.
 
-Pruebas de la base (necesitan PostgreSQL instalado): `bash supabase/tests/run.sh`.
+La clave vive solo en el servidor. Límites diarios por usuario y otros ajustes: ver [`supabase/README.md`](supabase/README.md).
+
+## Compilar el APK
+
+```bash
+cd apps/mobile
+npx eas-cli@latest build -p android --profile preview
+```
+
+Las variables `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` ya están en EAS (entorno *preview*). La compilación se detiene si alguien pone una clave secreta.
 
 ## Comandos
 
@@ -53,41 +66,32 @@ Desde `apps/mobile`:
 | Comando | Qué hace |
 | --- | --- |
 | `pnpm start` | Servidor de desarrollo |
-| `pnpm android` | Abre en un emulador/dispositivo Android |
-| `pnpm test` | Pruebas (Jest + Testing Library) |
-| `pnpm lint` | ESLint |
-| `pnpm typecheck` | TypeScript sin emitir |
-| `npx expo export --platform android` | Verifica que la app compila para Android |
+| `pnpm test` | Pruebas de la app |
+| `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript |
+| `npx expo export --platform android` | Verifica que la app empaqueta para Android |
 
-## Compilar un APK instalable
-
-```bash
-npm install -g eas-cli
-eas login
-cd apps/mobile
-eas build --platform android --profile preview   # genera un APK para instalar directo
-```
-
-El perfil `production` genera un `.aab` para Google Play.
+Desde la raíz: `bash supabase/tests/run.sh` (base de datos) y `cd supabase/functions && deno test --allow-env` (funciones).
 
 ## Estructura
 
 ```text
 disciplina-ai/
 ├─ apps/mobile/
-│  ├─ src/app/            # rutas (Expo Router) — solo componen pantallas
-│  ├─ src/features/       # un módulo por dominio (dashboard, planner, settings…)
-│  ├─ src/components/ui/  # componentes reutilizables
-│  ├─ src/theme/          # tokens de diseño (colores, espaciado, tipografía)
-│  ├─ src/lib/            # utilidades puras (fechas, roadmap)
-│  └─ src/hooks/
-├─ packages/shared/       # tipos y esquemas compartidos (Fase 3)
-├─ supabase/              # migraciones, RLS, Edge Functions (Fase 3+)
-└─ docs/adr/              # decisiones de arquitectura
+│  ├─ src/app/            # rutas (Expo Router), solo componen pantallas
+│  ├─ src/features/       # un módulo por dominio: habits, tasks, notes, events, reminders,
+│  │                      # training, nutrition, assistant, progress, organize, settings…
+│  ├─ src/components/     # ui/ (botones, tarjetas…) y charts/ (líneas y barras SVG)
+│  ├─ src/lib/            # fechas, red, IA (cliente), fotos, validación
+│  └─ src/test/           # Supabase falso con RLS simulada, mocks y catálogo real
+├─ supabase/              # migraciones, semilla, pruebas y Edge Functions
+└─ docs/adr/              # decisiones de arquitectura (0001, 0002)
 ```
 
-## Seguridad
+## Seguridad y privacidad
 
-- La app solo conocerá la URL pública de Supabase y la clave `anon`.
-- Las claves de IA y la `service_role` vivirán como secretos de las Edge Functions, nunca en la app ni en el repositorio.
-- `.env` está en `.gitignore`.
+- La app solo conoce la URL pública y la clave publicable. La clave de IA vive como secreto de las Edge Functions.
+- RLS en todas las tablas (31): cada usuario solo ve lo suyo; el anónimo no ve nada.
+- La IA usa la sesión del usuario (nunca `service_role`), solo con los datos que el usuario permite, y no puede escribir: propone y el usuario confirma.
+- Fotos en carpeta privada por usuario; se borran tras el análisis por defecto.
+- Objetivos calóricos con mínimos y márgenes impuestos también en la base de datos. El asistente no propone ejercicio para "compensar" comidas.
+- Exportación completa en JSON y borrado de cuenta (datos y fotos).
