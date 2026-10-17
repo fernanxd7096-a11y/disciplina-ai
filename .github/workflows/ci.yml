@@ -13,6 +13,21 @@ jobs:
       - name: Migraciones + pruebas RLS en Postgres temporal
         run: bash supabase/tests/run.sh
 
+  functions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck Edge Functions
+        run: deno check */index.ts
+      - name: Tests Edge Functions (IA simulada, sin red)
+        run: deno test --allow-env
+
   mobile:
     runs-on: ubuntu-latest
     defaults:
