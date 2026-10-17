@@ -64,6 +64,11 @@ function RootStack() {
           <Stack.Screen name="training/plan-new" options={{ title: 'Nueva rutina' }} />
           <Stack.Screen name="training/session/[id]" options={{ title: 'Entrenamiento' }} />
           <Stack.Screen name="training/exercise/[id]" options={{ title: 'Ejercicio' }} />
+          <Stack.Screen name="nutrition/goal" options={{ title: 'Objetivo nutricional' }} />
+          <Stack.Screen name="nutrition/add" options={{ title: 'Agregar comida', presentation: 'modal' }} />
+          <Stack.Screen name="nutrition/photo" options={{ title: 'Foto de comida' }} />
+          <Stack.Screen name="nutrition/weight" options={{ title: 'Peso' }} />
+          <Stack.Screen name="nutrition/meal/[id]" options={{ title: 'Comida' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={status === 'signedOut'}>
