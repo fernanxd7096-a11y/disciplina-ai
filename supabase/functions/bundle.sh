@@ -4,8 +4,8 @@
 # Uso: bash supabase/functions/bundle.sh
 set -euo pipefail
 cd "$(dirname "$0")"
-mkdir -p dist
+mkdir -p deploy
 for f in food-photo workout-plan assistant-chat; do
-  deno bundle --platform deno --external 'npm:*' -o "dist/$f.js" "$f/index.ts" >/dev/null
-  echo "✔ dist/$f.js ($(wc -c <"dist/$f.js") bytes)"
+  deno bundle --platform deno --external 'npm:*' -o "deploy/$f.js" "$f/index.ts" >/dev/null
+  echo "✔ deploy/$f.js ($(wc -c <"deploy/$f.js") bytes)"
 done
