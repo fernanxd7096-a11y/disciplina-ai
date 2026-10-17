@@ -47,7 +47,16 @@
         {
           "color": "#22D3EE"
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Disciplina AI usa la cámara para fotografiar tu comida y estimar sus calorías.",
+          "photosPermission": "Disciplina AI usa tus fotos para analizar comidas que elijas.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

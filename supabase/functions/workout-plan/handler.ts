@@ -99,6 +99,7 @@ Reglas obligatorias:
 - Respeta el tiempo por sesión (incluye 5–10 min de calentamiento y vuelta a la calma).
 - Ajusta volumen e intensidad a la experiencia: principiantes 2–3 series, técnica antes que carga.
 - Evita ejercicios que choquen con las limitaciones o lesiones indicadas y menciónalo en safety_notes.
+- En ejercicios isométricos o de cardio (plancha, colgarse, cuerda, sombra) reps son SEGUNDOS por serie.
 - suggested_kg solo si hay historial real de ese ejercicio; si no, null.
 - Nunca relaciones el entrenamiento con "quemar" comidas ni propongas ejercicio para compensar lo que se comió.
 - Si algo podría ser inseguro, dilo en safety_notes y sugiere consultar a un profesional de salud.
@@ -145,14 +146,15 @@ export function normalizePlan(raw: z.infer<typeof aiOutput>, profile: FitnessPro
       const c = byKey.get(ex.code);
       if (!c || seen.has(c.id)) continue;
       seen.add(c.id);
-      const reps_min = clamp(ex.reps_min, 1, 30);
+      // Repeticiones o segundos (planchas, saltar la cuerda); la base admite hasta 100.
+      const reps_min = clamp(ex.reps_min, 1, 100);
       const kg = ex.suggested_kg;
       dayItems.push({
         day_index: d,
         exercise_id: c.id,
         sets: clamp(ex.sets, 1, 6),
         reps_min,
-        reps_max: clamp(Math.max(ex.reps_max, reps_min), reps_min, 30),
+        reps_max: clamp(Math.max(ex.reps_max, reps_min), reps_min, 100),
         rest_seconds: clamp(ex.rest_seconds, 30, 300),
         suggested_kg: kg != null && kg > 0 && kg <= 300 && c.equipment !== 'bodyweight' ? Math.round(kg * 2) / 2 : null,
         sort_order: dayItems.length,

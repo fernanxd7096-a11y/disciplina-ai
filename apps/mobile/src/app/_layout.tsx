@@ -60,6 +60,10 @@ function RootStack() {
           <Stack.Screen name="note/[id]" options={{ title: 'Nota' }} />
           <Stack.Screen name="event/new" options={{ title: 'Nuevo evento', presentation: 'modal' }} />
           <Stack.Screen name="event/[id]" options={{ title: 'Evento' }} />
+          <Stack.Screen name="training/profile" options={{ title: 'Perfil de entrenamiento', presentation: 'modal' }} />
+          <Stack.Screen name="training/plan-new" options={{ title: 'Nueva rutina' }} />
+          <Stack.Screen name="training/session/[id]" options={{ title: 'Entrenamiento' }} />
+          <Stack.Screen name="training/exercise/[id]" options={{ title: 'Ejercicio' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={status === 'signedOut'}>

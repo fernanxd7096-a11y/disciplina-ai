@@ -58,11 +58,11 @@ Deno.test('acota series, repeticiones y descansos y respeta el tiempo de sesión
   const { r } = repo();
   const many = ['push_up', 'squat', 'pull_up', 'plank', 'lunge'];
   const ai = new MockProvider({
-    plan: () => ({ name: 'x', notes: '', safety_notes: [], days: [0, 1, 2].map((i) => day(`D${i}`, many, { sets: 20, reps_min: 50, reps_max: 3, rest_seconds: 999, suggested_kg: 40 })) }),
+    plan: () => ({ name: 'x', notes: '', safety_notes: [], days: [0, 1, 2].map((i) => day(`D${i}`, many, { sets: 20, reps_min: 150, reps_max: 3, rest_seconds: 999, suggested_kg: 40 })) }),
   });
   const { plan } = await handleWorkoutPlan({}, r, ai);
   for (const i of plan.items) {
-    assertEquals([i.sets, i.reps_min, i.reps_max, i.rest_seconds], [6, 30, 30, 300]);
+    assertEquals([i.sets, i.reps_min, i.reps_max, i.rest_seconds], [6, 100, 100, 300]);
     assertEquals(i.suggested_kg, null); // sin carga sugerida en ejercicios con peso corporal
   }
   for (const d of [0, 1, 2]) {

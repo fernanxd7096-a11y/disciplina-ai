@@ -95,3 +95,12 @@ on conflict (code) do update set
 
 writeFileSync(out, sql);
 console.log(`✔ ${foods.length} alimentos y ${exercises.length} ejercicios → ${out}`);
+
+// Copia del catálogo para las pruebas de la app (así prueban contra los datos reales).
+const fixture = join(here, '..', '..', 'apps', 'mobile', 'src', 'test', 'catalog.ts');
+const exRows = exercises.map((e) => ({ id: `ex-${e.code}`, owner_id: null, ...e }));
+writeFileSync(
+  fixture,
+  `// GENERADO por supabase/seed/build.mjs desde exercises.csv. No editar a mano.\nimport type { Exercise } from '@/features/training/types';\n\nexport const EXERCISES = ${JSON.stringify(exRows, null, 1)} as Exercise[];\n`,
+);
+console.log(`✔ catálogo de prueba → ${fixture}`);

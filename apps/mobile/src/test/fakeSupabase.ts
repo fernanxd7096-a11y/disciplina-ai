@@ -25,7 +25,28 @@ const TABLE_DEFAULTS: Record<string, Row> = {
   notes: { title: '', body: '', pinned: false, archived_at: null, category_id: null, task_id: null, event_id: null },
   events: { all_day: false, location: null, notes: null, timezone: 'America/Lima', category_id: null },
   reminders: { event_id: null, task_id: null, offset_minutes: null, remind_at: null, enabled: true },
+  workout_plans: { source: 'manual', notes: null, active: false },
+  plan_exercises: { rest_seconds: 90, suggested_kg: null, sort_order: 0 },
+  workout_sessions: { plan_id: null, day_index: null, finished_at: null, perceived_effort: null, notes: null },
+  set_logs: { weight_kg: 0 },
+  meals: { origin: 'manual', analysis_id: null, photo_path: null, notes: null },
+  meal_items: { food_id: null, is_ai_estimate: false, user_edited: false },
+  ai_conversations: { title: 'Conversación' },
+  ai_action_proposals: { status: 'pending', applied_at: null },
 };
+
+/** Tablas con filas globales (owner_id nulo) visibles para todos, como en la RLS real. */
+const GLOBAL_TABLES = new Set(['exercises', 'foods']);
+
+type RpcHandler = (args: Record<string, unknown>, fake: FakeSupabase) => { data: unknown; error: unknown } | unknown;
+type FunctionHandler = (body: unknown, fake: FakeSupabase) => { data?: unknown; error?: { message: string; context?: unknown } | null } | Promise<{ data?: unknown; error?: { message: string; context?: unknown } | null }>;
+
+function normalize(s: unknown) {
+  return String(s ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
 let idCounter = 0;
 export function fakeId(): string {
@@ -43,6 +64,26 @@ export class FakeSupabase {
   failingTables = new Set<string>();
   private listeners = new Set<Listener>();
   calls: { table: string; op: string; payload?: unknown }[] = [];
+  /** Archivos subidos a Storage: "bucket/ruta" → bytes. */
+  files = new Map<string, unknown>();
+  /** Respuestas de Edge Functions por nombre (las pruebas las definen). */
+  functionHandlers: Record<string, FunctionHandler> = {};
+  functionCalls: { name: string; body: unknown }[] = [];
+  rpcHandlers: Record<string, RpcHandler> = {
+    search_foods: ({ q, max_results }, fake) => {
+      const term = normalize(q);
+      const uid = fake.session?.user.id;
+      return fake
+        .rows('foods')
+        .filter((f) => (f.owner_id == null || f.owner_id === uid) && normalize(f.name_es).includes(term))
+        .slice(0, Number(max_results ?? 20));
+    },
+    delete_my_account: (_a, fake) => {
+      const uid = fake.session?.user.id;
+      for (const t of Object.keys(fake.tables)) fake.tables[t] = fake.tables[t].filter((r) => r.user_id !== uid && r.owner_id !== uid);
+      return null;
+    },
+  };
 
   constructor(opts: { signedInAs?: string } = {}) {
     if (opts.signedInAs) this.signInAs(opts.signedInAs);
@@ -122,6 +163,43 @@ export class FakeSupabase {
   from(table: string) {
     return new FakeQuery(this, table);
   }
+
+  async rpc(name: string, args: Record<string, unknown> = {}) {
+    this.calls.push({ table: `rpc:${name}`, op: 'rpc', payload: args });
+    if (!this.session) return { data: null, error: { message: 'permission denied', code: '42501' } };
+    const h = this.rpcHandlers[name];
+    if (!h) return { data: null, error: { message: `rpc ${name} no simulada` } };
+    return { data: h(args, this) ?? null, error: null };
+  }
+
+  functions = {
+    invoke: async (name: string, opts: { body?: unknown } = {}) => {
+      this.functionCalls.push({ name, body: opts.body });
+      const h = this.functionHandlers[name];
+      if (!h) return { data: null, error: { message: 'Function not found', context: { status: 404 } } };
+      const r = await h(opts.body, this);
+      return { data: r.data ?? null, error: r.error ?? null };
+    },
+  };
+
+  storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, body: unknown) => {
+        const uid = this.session?.user.id;
+        if (!uid || !path.startsWith(`${uid}/`)) return { data: null, error: { message: 'new row violates row-level security policy' } };
+        this.files.set(`${bucket}/${path}`, body);
+        return { data: { path }, error: null };
+      },
+      remove: async (paths: string[]) => {
+        for (const p of paths) this.files.delete(`${bucket}/${p}`);
+        return { data: paths.map((name) => ({ name })), error: null };
+      },
+      createSignedUrl: async (path: string) =>
+        this.files.has(`${bucket}/${path}`)
+          ? { data: { signedUrl: `https://fake.storage/${bucket}/${path}` }, error: null }
+          : { data: null, error: { message: 'Object not found' } },
+    }),
+  };
 
   /** Para pasarlo donde se espera un SupabaseClient. */
   asClient(): SupabaseClient {
@@ -216,7 +294,15 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: unknown; count?: 
   private visible(): Row[] {
     const uid = this.uid();
     const all = this.db.tables[this.table] ?? [];
+    if (GLOBAL_TABLES.has(this.table)) return all.filter((r) => r.owner_id == null || r.owner_id === uid);
     return all.filter((r) => r.user_id === uid);
+  }
+
+  /** Lo que se puede modificar: en catálogos, solo filas propias (las globales son de solo lectura). */
+  private writable(): Row[] {
+    const uid = this.uid();
+    if (GLOBAL_TABLES.has(this.table)) return (this.db.tables[this.table] ?? []).filter((r) => r.owner_id === uid);
+    return this.visible();
   }
 
   private exec(): { data: unknown; error: unknown } {
@@ -248,7 +334,7 @@ class FakeQuery implements PromiseLike<{ data: unknown; error: unknown; count?: 
         result.push(row);
       }
     } else {
-      let rows = this.visible().filter((r) => this.filters.every((f) => f(r)));
+      let rows = (this.op === 'select' ? this.visible() : this.writable()).filter((r) => this.filters.every((f) => f(r)));
       if (this.op === 'update') {
         rows.forEach((r) => Object.assign(r, this.patch, { updated_at: now }));
       } else if (this.op === 'delete') {

@@ -61,3 +61,59 @@ jest.mock('@react-native-community/netinfo', () => {
     },
   };
 });
+
+// Cámara y galería falsas: las pruebas eligen el resultado con globalThis.__picker.
+jest.mock('expo-image-picker', () => {
+  const mockPicker = { result: { canceled: true, assets: null }, granted: true };
+  globalThis.__picker = mockPicker;
+  return {
+    requestCameraPermissionsAsync: jest.fn(async () => ({ granted: mockPicker.granted, canAskAgain: true })),
+    requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ granted: mockPicker.granted, canAskAgain: true })),
+    launchCameraAsync: jest.fn(async () => mockPicker.result),
+    launchImageLibraryAsync: jest.fn(async () => mockPicker.result),
+  };
+});
+
+// Redimensionado: devuelve un JPEG mínimo en base64 (cabecera FF D8 FF).
+jest.mock('expo-image-manipulator', () => ({
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+  ImageManipulator: {
+    manipulate: () => {
+      const ctx = {
+        resize: () => ctx,
+        renderAsync: async () => ({
+          width: 2000,
+          height: 1500,
+          saveAsync: async () => ({ uri: 'file:///tmp/out.jpg', width: 1280, height: 960, base64: '/9j/4AAQ' }),
+        }),
+      };
+      return ctx;
+    },
+  },
+}));
+
+// Archivos y compartir (exportar datos).
+jest.mock('expo-file-system', () => {
+  const written = new Map();
+  globalThis.__files = written;
+  class MockFile {
+    constructor(dir, name) {
+      this.uri = `${dir}/${name}`;
+    }
+    create() {}
+    write(content) {
+      written.set(this.uri, content);
+    }
+    get exists() {
+      return written.has(this.uri);
+    }
+    delete() {
+      written.delete(this.uri);
+    }
+  }
+  return { File: MockFile, Paths: { cache: 'file:///cache', document: 'file:///docs' } };
+});
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(async () => true),
+  shareAsync: jest.fn(async () => undefined),
+}));
