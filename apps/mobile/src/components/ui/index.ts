@@ -15,3 +15,4 @@ export { SegmentedControl } from './SegmentedControl';
 export { EmptyState, ErrorState, LoadingState } from './States';
 export { Text, type TextProps } from './Text';
 export { TextField, type TextFieldProps } from './TextField';
+export { ToggleRow } from './ToggleRow';

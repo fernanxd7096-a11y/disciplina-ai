@@ -78,6 +78,21 @@ export class FakeSupabase {
         .filter((f) => (f.owner_id == null || f.owner_id === uid) && normalize(f.name_es).includes(term))
         .slice(0, Number(max_results ?? 20));
     },
+    my_progress_counts: (_a, fake) => {
+      const uid = fake.session?.user.id;
+      const mine = (t: string) => fake.rows(t).filter((r) => r.user_id === uid && !r.deleted_at);
+      const meals = mine('meals');
+      return {
+        tasks_done: mine('tasks').filter((t) => t.status === 'done').length,
+        habit_logs: mine('habit_logs').filter((l) => Number(l.value) > 0).length,
+        workouts: mine('workout_sessions').filter((s) => s.finished_at).length,
+        meals: meals.length,
+        meal_days: new Set(meals.map((m) => String(m.eaten_at).slice(0, 10))).size,
+        weight_logs: mine('weight_logs').length,
+        notes: mine('notes').length,
+        photo_meals: meals.filter((m) => m.origin === 'photo').length,
+      };
+    },
     delete_my_account: (_a, fake) => {
       const uid = fake.session?.user.id;
       for (const t of Object.keys(fake.tables)) fake.tables[t] = fake.tables[t].filter((r) => r.user_id !== uid && r.owner_id !== uid);
@@ -189,6 +204,12 @@ export class FakeSupabase {
         if (!uid || !path.startsWith(`${uid}/`)) return { data: null, error: { message: 'new row violates row-level security policy' } };
         this.files.set(`${bucket}/${path}`, body);
         return { data: { path }, error: null };
+      },
+      list: async (prefix: string) => {
+        const uid = this.session?.user.id;
+        if (!uid || prefix !== uid) return { data: [], error: null };
+        const names = [...this.files.keys()].filter((k) => k.startsWith(`${bucket}/${prefix}/`)).map((k) => ({ name: k.slice(bucket.length + prefix.length + 2) }));
+        return { data: names, error: null };
       },
       remove: async (paths: string[]) => {
         for (const p of paths) this.files.delete(`${bucket}/${p}`);

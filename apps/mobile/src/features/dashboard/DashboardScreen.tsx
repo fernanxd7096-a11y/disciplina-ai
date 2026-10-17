@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { useMemo } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -25,16 +24,8 @@ import { groupTasks, localTime } from '@/features/tasks/logic';
 import { TaskRow } from '@/features/tasks/TaskRow';
 import { useNow } from '@/hooks/useNow';
 import { formatLongDate, greeting, timeUntil } from '@/lib/dates';
-import { phaseNotice, type Feature } from '@/lib/roadmap';
 import { colors, spacing } from '@/theme';
-
-type DomainRow = { key: Feature; label: string; icon: ComponentProps<typeof Ionicons>['name']; color: string };
-
-/** Módulos que aún no tienen datos reales (se van reemplazando por resúmenes reales). */
-const upcoming: DomainRow[] = [
-  { key: 'training', label: 'Entrenamiento', icon: 'barbell-outline', color: colors.training },
-  { key: 'nutrition', label: 'Nutrición', icon: 'nutrition-outline', color: colors.nutrition },
-];
+import { NutritionSummary, ProgressSummary, TrainingSummary } from './summaries';
 
 const MAX_PENDING = 4;
 
@@ -153,10 +144,17 @@ export function DashboardScreen() {
         ) : null}
       </Card>
 
-      <View style={styles.actions}>
-        <Button label="Nuevo hábito" icon="add" variant="secondary" grow onPress={() => router.push('/habit/new')} testID="quick-new-habit" />
-        <Button label="Asistente" icon="sparkles-outline" variant="secondary" grow onPress={() => router.push('/assistant')} testID="open-assistant" />
+      <ProgressSummary />
+
+      <SectionHeader title="Crear rápido" />
+      <View style={styles.quick}>
+        <IconButton icon="flame-outline" accessibilityLabel="Nuevo hábito" onPress={() => router.push('/habit/new')} testID="quick-new-habit" />
+        <IconButton icon="checkbox-outline" accessibilityLabel="Nueva tarea" onPress={() => router.push('/task/new')} testID="quick-new-task" />
+        <IconButton icon="calendar-outline" accessibilityLabel="Nuevo evento" onPress={() => router.push('/event/new')} testID="quick-new-event" />
+        <IconButton icon="document-text-outline" accessibilityLabel="Nueva nota" onPress={() => router.push('/note/new')} testID="quick-new-note" />
+        <IconButton icon="camera-outline" accessibilityLabel="Foto de comida" onPress={() => router.push('/nutrition/photo')} testID="quick-photo" />
       </View>
+      <Button label="Preguntar al asistente" icon="sparkles-outline" variant="secondary" fullWidth onPress={() => router.push('/assistant')} testID="open-assistant" />
 
       <SectionHeader title="Próximo evento" actionLabel="Calendario" onAction={() => router.push('/planner')} />
       {upcomingEvent ? (
@@ -216,22 +214,10 @@ export function DashboardScreen() {
         ) : null}
       </Card>
 
-      <SectionHeader title="Próximamente" />
-      <Card>
-        {upcoming.map((d, i) => (
-          <View key={d.key} style={[styles.domainRow, i > 0 && styles.divider]}>
-            <View style={[styles.domainIcon, { borderColor: d.color }]}>
-              <Ionicons name={d.icon} size={18} color={d.color} />
-            </View>
-            <View style={styles.flex}>
-              <Text variant="bodyStrong">{d.label}</Text>
-              <Text variant="caption" color="textMuted">
-                {phaseNotice(d.key)}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </Card>
+      <SectionHeader title="Entrenamiento de hoy" />
+      <TrainingSummary />
+      <SectionHeader title="Nutrición de hoy" />
+      <NutritionSummary />
 
       <Button label="Estadísticas" icon="stats-chart-outline" variant="ghost" onPress={() => router.push('/stats')} testID="open-stats" />
     </Screen>
@@ -242,11 +228,8 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   progressText: { flex: 1, gap: spacing.xs },
   emptyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 40 },
-  domainRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.md },
-  domainIcon: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  quick: { flexDirection: 'row', justifyContent: 'space-between' },
   flex: { flex: 1, gap: spacing.xxs },
-  actions: { flexDirection: 'row', gap: spacing.md },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   eventBar: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: colors.events },
 });

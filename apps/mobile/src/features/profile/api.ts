@@ -17,11 +17,13 @@ export type Profile = {
   sex: Sex | null;
   height_cm: number | null;
   activity_level: ActivityLevel | null;
+  /** Qué cuenta en el porcentaje de disciplina. */
+  discipline_config: { habits: boolean; tasks: boolean; training: boolean };
 };
 
-export type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'timezone' | 'birth_date' | 'sex' | 'height_cm' | 'activity_level'>>;
+export type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'timezone' | 'birth_date' | 'sex' | 'height_cm' | 'activity_level' | 'discipline_config'>>;
 
-const PROFILE_COLS = 'user_id, display_name, timezone, locale, units, birth_date, sex, height_cm, activity_level';
+const PROFILE_COLS = 'user_id, display_name, timezone, locale, units, birth_date, sex, height_cm, activity_level, discipline_config';
 
 function normalize(row: Record<string, unknown>): Profile {
   return {
@@ -30,6 +32,7 @@ function normalize(row: Record<string, unknown>): Profile {
     sex: (row.sex as Sex | null) ?? null,
     height_cm: row.height_cm == null ? null : Number(row.height_cm),
     activity_level: (row.activity_level as ActivityLevel | null) ?? null,
+    discipline_config: { habits: true, tasks: true, training: true, ...((row.discipline_config as object | null) ?? {}) },
   };
 }
 

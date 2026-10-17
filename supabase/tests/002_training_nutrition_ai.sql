@@ -194,3 +194,19 @@ select tests.assert(
 select tests.assert(
   exists (select 1 from public.meals where user_id = '33333333-3333-3333-3333-333333333333'),
   'los datos de Carla siguen intactos');
+
+-- ---------------------------------------------------------------- 0004 reglas de disciplina
+begin;
+select tests.login_as('33333333-3333-3333-3333-333333333333');
+select tests.assert(
+  (select discipline_config ->> 'habits' from public.profiles) = 'true',
+  'por defecto el porcentaje de disciplina incluye hábitos, tareas y entrenamiento');
+update public.profiles set discipline_config = '{"habits": true, "tasks": false, "training": true}';
+select tests.assert(
+  (select discipline_config ->> 'tasks' from public.profiles) = 'false',
+  'el usuario puede cambiar qué cuenta en su disciplina');
+select tests.assert_fails(
+  $$update public.profiles set discipline_config = '{"habits": "si"}'$$,
+  'la configuración de disciplina tiene formato validado');
+commit;
+select tests.logout();
